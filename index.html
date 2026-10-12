@@ -75,7 +75,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const store=()=>localStorage.getItem('dina_key')?localStorage:sessionStorage;
 const get=k=>{try{return localStorage.getItem(k)||sessionStorage.getItem(k)||''}catch(e){return ''}};
 const OKU=u=>/^https:\/\/[a-z0-9-]+\.supabase\.co\/functions\/v1\/[a-z0-9_-]+\/?$/i.test(u);
-let URLB=OKU(get('dina_url'))?get('dina_url'):DEFAULT_URL,KEY=get('dina_key'),S=null,tab='home',busy=false,loading=false,lastOk=0,online=true,newKey=null,USERS=null,W=null,WERR='',pq='',pown='',esub='taches',emine=false,OPEN={},ARC={approvals:{},tasks:{},audit:{}},ARCM=new Set(),LOADING=new Set(),FIRST=null;
+let URLB=OKU(get('dina_url'))?get('dina_url'):DEFAULT_URL,KEY=get('dina_key'),S=null,tab='home',busy=false,loading=false,lastOk=0,online=true,newKey=null,USERS=null,W=null,WERR='',pq='',pown='',esub='taches',emine=false,DRV=null,dq='',OPEN={},ARC={approvals:{},tasks:{},audit:{}},ARCM=new Set(),LOADING=new Set(),FIRST=null;
 const pd=d=>!d?'':new Date(d).toLocaleDateString('sv-SE',{timeZone:'Europe/Paris'});
 const ph=d=>!d?'':new Date(d).toLocaleTimeString('fr-FR',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit'});
 const dm=d=>pd(d).slice(5).split('-').reverse().join('/');
@@ -101,7 +101,7 @@ function login(msg){
 function logout(){try{localStorage.removeItem('dina_key');sessionStorage.removeItem('dina_key')}catch(e){}KEY='';S=null;login()}
 async function load(first){
  if(loading)return;loading=true;
- try{S=await api('state');S.approvals=S.approvals||[];S.tasks=S.tasks||[];S.prompts=S.prompts||[];S.messages=S.messages||[];S.runs=S.runs||[];S.audit=S.audit||[];S.schedule=S.schedule||{};S.real=S.real||{orders:0,client_messages:0};S.settings={daily_budget_usd:5,...(S.settings||{})};try{W=await api('ws');W.leads=W.leads||[];W.tasks=W.tasks||[];W.notes=W.notes||[];W.team=W.team||[];WERR=''}catch(e2){if(e2.status===401)throw e2;WERR=e2.message}lastOk=Date.now();online=true;render();if(FIRST===null){FIRST={};api('archive_index').then(r=>{FIRST=r||{};if(ARK_TABS.includes(tab))render()}).catch(()=>{})}}
+ try{S=await api('state');S.approvals=S.approvals||[];S.tasks=S.tasks||[];S.prompts=S.prompts||[];S.messages=S.messages||[];S.runs=S.runs||[];S.audit=S.audit||[];S.schedule=S.schedule||{};S.real=S.real||{orders:0,client_messages:0};S.settings={daily_budget_usd:5,...(S.settings||{})};try{W=await api('ws');W.leads=W.leads||[];W.tasks=W.tasks||[];W.notes=W.notes||[];W.team=W.team||[];WERR=''}catch(e2){if(e2.status===401)throw e2;WERR=e2.message}lastOk=Date.now();online=true;render();if(DRV===null&&!load.drv){load.drv=1;api('drive_list').then(r=>{DRV=r;DRV.docs=DRV.docs||[];if(tab==='home')render()}).catch(()=>{})}if(FIRST===null){FIRST={};api('archive_index').then(r=>{FIRST=r||{};if(ARK_TABS.includes(tab))render()}).catch(()=>{})}}
  catch(e){online=false;if(e.status===401||!KEY){logout();if(e.status===401)login('Clé refusée');return}
   if(!S)$('#app').innerHTML=`<div class="card" role="alert">${esc(e.message)}<div class="row"><button class="btn" id="rt">Réessayer</button><button class="btn" id="lo">Reconnexion</button></div></div>`,$('#rt').onclick=()=>load(),$('#lo').onclick=logout;
   else{toast(e.message);head()}}
@@ -114,7 +114,7 @@ function head(){
  $('#sync').innerHTML=`<span class="live ${online?'':'off'}"></span>${online?'Synchronisé '+ph(new Date(lastOk)):'Hors ligne, dernière synchro '+ph(new Date(lastOk))}${WERR?' · espace de travail non synchronisé':''}`;
  const st=$('#stop');st.hidden=false;st.textContent=set.kill_switch?'Reprendre les agents':'Tout arrêter';st.className='btn '+(set.kill_switch?'ok':'ko');
  st.onclick=()=>act(st,async()=>{if(!set.kill_switch&&!confirm("Arrêt d'urgence : plus aucune nouvelle mission, et les tâches en cours s'arrêtent à la prochaine étape. Continuer ?"))return;await api('settings',{kill_switch:!set.kill_switch});toast(set.kill_switch?'Agents relancés':'Agents arrêtés');await load()})}
-const SECS={valider:'À valider',demander:'Demander une mission',travail:'Missions',livrables:'Livrables',pipeline:'Prospects',espace:'Espace de travail',dash:'Tableau de bord',plan:'Planning et automatisation',feed:'Activité en direct',agents:'Agents',historique:'Historique',journal:'Journal',acces:'Accès'};
+const SECS={valider:'À valider',demander:'Demander une mission',travail:'Missions',livrables:'Livrables',pipeline:'Prospects',espace:'Espace de travail',dash:'Tableau de bord',plan:'Planning et automatisation',feed:'Activité en direct',agents:'Agents',historique:'Historique',journal:'Journal',acces:'Accès',drive:'Drive DINA'};
 const ARK_TABS=['livrables','historique','journal'],LIM={approvals:200,tasks:150,audit:80};
 function tile(k,t,sub,al){return `<button class="tile ${al?'al':''}" data-t="${k}"><b>${esc(t)}</b><span>${sub}</span></button>`}
 function vHome(pend){
@@ -127,7 +127,7 @@ function vHome(pend){
  $('#app').innerHTML=`<h2 style="font-family:Georgia,serif;color:var(--br)">Bonjour ${esc(S.me.name)}</h2><p class="mut">Choisissez une catégorie.</p>`+
  g('Au quotidien',[tile('valider','À valider',pend.length?pend.length+' en attente':'Rien en attente',pend.length>0),tile('demander','Demander','Lancer une mission ou une demande'),tile('travail','Missions',open+' en cours ou en file'),tile('livrables','Livrables','Résultats des agents, par mois et par jour')])+
  g('Commercial',[tile('pipeline','Prospects',esc(pi)),tile('espace','Espace de travail',esc(ei))])+
- g('Pilotage',[tile('dash','Tableau de bord',`${st.running} en cours, ${st.failed} échec(s) sur 7 jours`,st.failed>0),tile('plan','Planning et automatisation',S.settings.kill_switch?'Agents arrêtés':nr?`Prochaines missions : ${nr.key.split('-').reverse().slice(0,2).join('/')} à ${String(nr.hh).padStart(2,'0')}h`:'Aucune mission prévue'),tile('feed','Activité en direct','Ce que font les agents')])+
+ g('Pilotage',[tile('dash','Tableau de bord',`${st.running} en cours, ${st.failed} échec(s) sur 7 jours`,st.failed>0),tile('plan','Planning et automatisation',S.settings.kill_switch?'Agents arrêtés':nr?`Prochaines missions : ${nr.key.split('-').reverse().slice(0,2).join('/')} à ${String(nr.hh).padStart(2,'0')}h`:'Aucune mission prévue'),tile('feed','Activité en direct','Ce que font les agents'),tile('drive','Drive DINA',DRV?`${DRV.docs.length} document(s) lus par les agents${DRV.sync?', synchro '+ph(DRV.sync.at):''}`:'Documents lus par les agents',!!(DRV&&driveLate()))])+
  g('Agents et suivi',[tile('agents','Agents',(()=>{const p=Object.keys(AG).filter(a=>!autoOn(a)).length;return p?p+' en pause automatique, réglages par agent':'Réglages par agent, performance, versions'})()),tile('historique','Historique','Décisions passées, par mois et par jour'),tile('journal','Journal','Qui a fait quoi, par mois et par jour'),...(own?[tile('acces','Accès','Personnes et clés')]:[])]);
  document.querySelectorAll('.tile').forEach(b=>b.onclick=()=>{tab=b.dataset.t;render()})}
 function render(){
@@ -136,7 +136,7 @@ function render(){
  if(tab==='acces'&&S.me.role!=='owner')tab='home';
  $('#app').innerHTML=`<div class="crumb"><button class="btn" id="bk">← Hub</button><b>${esc(SECS[tab]||'')}</b></div><div id="v"></div>`;
  $('#bk').onclick=()=>{tab='home';render()};
- const f={dash:()=>vHub('dash'),plan:()=>vHub('plan'),feed:()=>vHub('feed'),pipeline:vPipe,espace:vEspace,valider:vValider,demander:vDemander,travail:vTravail,livrables:vLivrables,agents:vAgents,historique:vHist,journal:vJournal,acces:vAcces}[tab];
+ const f={dash:()=>vHub('dash'),plan:()=>vHub('plan'),feed:()=>vHub('feed'),pipeline:vPipe,espace:vEspace,valider:vValider,demander:vDemander,travail:vTravail,livrables:vLivrables,agents:vAgents,historique:vHist,journal:vJournal,acces:vAcces,drive:vDrive}[tab];
  if(!f){tab='home';vHome(pend);return}f(pend)}
 // Dossiers mois / jour
 const MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
@@ -324,12 +324,29 @@ function vJournal(){const a=allOf('audit').sort((x,y)=>String(y.at).localeCompar
  const row=x=>`<tr><td>${esc(ph(x.at))}</td><td>${esc(x.actor)}</td><td>${esc(x.action)}</td><td>${esc(x.detail)}</td></tr>`;
  const wrap=h=>`<div style="overflow:auto"><table><tr><th>Heure</th><th>Qui</th><th>Action</th><th>Détail</th></tr>${h}</table></div>`;
  $('#v').innerHTML=`<div class="card"><b>Journal des actions</b><p class="mut">Qui a fait quoi sur le Hub, classé par mois puis par jour.</p></div>`+folders('jour',a,x=>x.at,row,{ark:'audit',wrap,empty:'<div class="card">Rien pour l\'instant.</div>'});bindFolders()}
+const driveLate=()=>!!(DRV&&DRV.sync&&Date.now()-new Date(DRV.sync.at)>40*60000);
+async function vDrive(){
+ const v=$('#v');if(!DRV)v.innerHTML='<div class="card">Chargement…</div>';
+ try{DRV=await api('drive_list');DRV.docs=DRV.docs||[]}catch(e){v.innerHTML=`<div class="card" role="alert">${esc(e.message)}</div>`;return}
+ if(tab!=='drive')return;
+ const D=DRV.docs,sy=DRV.sync,n=k=>D.filter(d=>d.status===k).length;
+ const setup=`<ol class="mut" style="padding-left:18px"><li>Onglet <b>Accès</b> (propriétaire) : ajoutez une personne nommée « Drive », rôle <b>Robot Drive</b>, et copiez la clé affichée.</li><li>Ouvrez <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a> avec le compte Google qui possède le Drive DINA, créez un projet nommé « DINA Drive ».</li><li>Remplacez tout le code par le script ci-dessous (bouton Copier), puis collez la clé entre les guillemets de <code>CLE</code>.</li><li>Enregistrez, choisissez la fonction <b>installer</b>, cliquez sur Exécuter et autorisez l'accès demandé par Google.</li></ol><p class="mut">Ensuite tout est automatique : toutes les 10 minutes, les documents ajoutés ou modifiés dans DINA CRÉATION (et ses sous-dossiers) sont lus, résumés et signalés au chef d'orchestre, qui répartit le travail. Pour suivre un autre dossier, ajoutez son identifiant dans <code>DOSSIERS</code>.</p><div class="row"><button class="btn" id="gsc">Copier le script</button></div>`;
+ const head=sy?`<div class="card"><b><span class="live ${driveLate()?'off':''}"></span>Synchronisation automatique</b><p class="mut">Dernière synchro : ${esc(dm(sy.at)+' '+ph(sy.at))}${sy.pending?` · import en cours, ${sy.pending} document(s) restant(s)`:''}${driveLate()?' · <b style="color:var(--ko)">aucune synchro depuis plus de 40 minutes, vérifiez le script Google</b>':''}</p>
+ <div class="kpis"><div class="kpi"><b>${D.length}</b><span>documents suivis</span></div><div class="kpi"><b>${n('ok')}</b><span>lus et résumés</span></div><div class="kpi"><b>${n('a_resumer')}</b><span>en cours de lecture</span></div><div class="kpi"><b>${n('meta')}</b><span>sans texte (photos, vidéos)</span></div>${n('erreur')?`<div class="kpi al"><b>${n('erreur')}</b><span>illisibles</span></div>`:''}</div>
+ <details><summary>Installer ou réinstaller la synchronisation</summary>${setup}</details></div>`
+ :`<div class="card"><b>Connecter le Drive DINA</b><p class="mut">Une seule installation, 5 minutes. Les agents liront ensuite tout le dossier DINA CRÉATION, et chaque ajout sera pris en compte sans que vous ayez à le leur dire.</p>${setup}</div>`;
+ v.innerHTML=head+(D.length?`<div class="card"><input type="text" id="dq" placeholder="Rechercher un document (nom, dossier, contenu résumé)" value="${esc(dq)}"></div><div id="dl"></div>`:'');
+ const draw=()=>{const q=dq.toLowerCase(),L=D.filter(d=>!q||(d.name+' '+d.path+' '+(d.summary||'')).toLowerCase().includes(q)),g={};L.forEach(d=>(g[d.path||'(racine)']??=[]).push(d));
+  $('#dl').innerHTML=Object.keys(g).sort().map(k=>`<details class="mo" data-k="drv:${esc(k)}" ${q||OPEN['drv:'+k]?'open':''}><summary>${esc(k)} <span class="tag">${g[k].length}</span></summary>${g[k].map(d=>`<div class="card" style="margin:8px 0 0 14px"><a href="${esc(/^https:\/\//.test(d.url||'')?d.url:'#')}" target="_blank" rel="noopener"><b>${esc(d.name)}</b></a> <span class="mut">${esc(dm(d.modified_at))}</span> <span class="tag">${esc({ok:'lu',a_resumer:'en lecture',meta:'sans texte',erreur:'illisible'}[d.status]||d.status)}</span>${d.agents?`<span class="tag">${esc(String(d.agents).split(',').map(a=>(AG[a]||a).split(' ')[0]).join(', '))}</span>`:''}${d.summary?`<div class="mut">${esc(d.summary)}</div>`:''}</div>`).join('')}</details>`).join('')||'<div class="card">Aucun document trouvé.</div>';
+  document.querySelectorAll('#dl details[data-k]').forEach(x=>x.ontoggle=()=>{OPEN[x.dataset.k]=x.open})};
+ if(D.length){draw();$('#dq').oninput=e=>{dq=e.target.value;draw()}}
+ $('#gsc').onclick=()=>navigator.clipboard?.writeText($('#gs').textContent.trim()).then(()=>toast('Script copié'),()=>toast('Copie impossible, sélectionnez le texte à la main'))}
 async function vAcces(){
  $('#v').innerHTML='<div class="card">Chargement…</div>';
  try{USERS=(await api('users')).users}catch(e){$('#v').innerHTML=`<div class="card" role="alert">${esc(e.message)}</div>`;return}
  $('#v').innerHTML=`${newKey?`<div class="card"><b>Nouvelle clé</b><p class="mut">Copiez-la maintenant et remettez-la à la personne. Elle ne sera plus jamais affichée.</p><div class="keybox" id="kb">${esc(newKey)}</div><div class="row"><button class="btn" id="kc">Copier</button><button class="btn" id="kh">J'ai copié, masquer</button></div></div>`:''}
- <div class="card"><b>Accès au Hub</b><p class="mut">Chaque personne a sa propre clé, ses actions sont tracées dans le Journal. Le propriétaire gère les accès ; les associés valident et demandent.</p><div style="overflow:auto"><table><tr><th>Nom</th><th>Rôle</th><th>Dernière visite</th><th>État</th><th></th></tr>${USERS.map(u=>`<tr><td>${esc(u.name)}</td><td>${u.role==='owner'?'Propriétaire':'Associé'}</td><td>${u.last_seen?esc(dm(u.last_seen)+' '+ph(u.last_seen)):'jamais'}</td><td>${u.active?'Actif':'Révoqué'}</td><td><button class="btn" data-rot="${esc(u.id)}">Nouvelle clé</button> <button class="btn ${u.active?'ko':''}" data-rev="${esc(u.id)}" data-act="${u.active?0:1}">${u.active?'Révoquer':'Rétablir'}</button></td></tr>`).join('')||'<tr><td colspan="5">Aucun accès personnel pour l\'instant.</td></tr>'}</table></div></div>
- <div class="card"><b>Ajouter une personne</b><div class="row"><label>Nom <input type="text" id="un" maxlength="40"></label><label>Rôle <select id="ur"><option value="associe">Associé</option><option value="owner">Propriétaire</option></select></label><button class="btn ok" id="uc">Créer l'accès</button></div></div>`;
+ <div class="card"><b>Accès au Hub</b><p class="mut">Chaque personne a sa propre clé, ses actions sont tracées dans le Journal. Le propriétaire gère les accès ; les associés valident et demandent.</p><div style="overflow:auto"><table><tr><th>Nom</th><th>Rôle</th><th>Dernière visite</th><th>État</th><th></th></tr>${USERS.map(u=>`<tr><td>${esc(u.name)}</td><td>${u.role==='owner'?'Propriétaire':u.role==='drive'?'Robot Drive':'Associé'}</td><td>${u.last_seen?esc(dm(u.last_seen)+' '+ph(u.last_seen)):'jamais'}</td><td>${u.active?'Actif':'Révoqué'}</td><td><button class="btn" data-rot="${esc(u.id)}">Nouvelle clé</button> <button class="btn ${u.active?'ko':''}" data-rev="${esc(u.id)}" data-act="${u.active?0:1}">${u.active?'Révoquer':'Rétablir'}</button></td></tr>`).join('')||'<tr><td colspan="5">Aucun accès personnel pour l\'instant.</td></tr>'}</table></div></div>
+ <div class="card"><b>Ajouter une personne</b><div class="row"><label>Nom <input type="text" id="un" maxlength="40"></label><label>Rôle <select id="ur"><option value="associe">Associé</option><option value="owner">Propriétaire</option><option value="drive">Robot Drive (synchronisation)</option></select></label><button class="btn ok" id="uc">Créer l'accès</button></div></div>`;
  if(newKey){$('#kc').onclick=()=>navigator.clipboard?.writeText(newKey).then(()=>toast('Clé copiée'));$('#kh').onclick=()=>{newKey=null;vAcces()}}
  $('#uc').onclick=e=>act(e.target,async()=>{const n=$('#un').value.trim();if(!n){toast('Nom requis');return}const r=await api('user_create',{name:n,role:$('#ur').value});newKey=r.key;await vAcces()});
  document.querySelectorAll('[data-rot]').forEach(b=>b.onclick=()=>act(b,async()=>{if(!confirm("L'ancienne clé cessera de fonctionner. Continuer ?"))return;const r=await api('user_rotate',{id:+b.dataset.rot});newKey=r.key;await vAcces()}));
@@ -337,4 +354,155 @@ async function vAcces(){
 function poll(){setTimeout(async()=>{if(KEY&&!document.hidden&&!busy&&!editing()&&tab!=='acces')await load();poll()},['home','dash','plan','feed'].includes(tab)?10000:30000)}
 document.querySelector('h1').onclick=()=>{if(S){tab='home';render()}};
 if(KEY)load();else login();poll();
+</script>
+<script type="text/plain" id="gs">
+/**
+ * DINA · Synchronisation du Drive vers les agents
+ * Parcourt le dossier DINA CRÉATION (et tous ses sous-dossiers), lit le texte des documents
+ * et l'envoie au serveur DINA. Les agents y ont ensuite accès automatiquement.
+ *
+ * Installation (une seule fois) :
+ * 1. Collez votre clé « Robot Drive » (Hub DINA > Accès) entre les guillemets de CLE ci-dessous.
+ * 2. Enregistrez, choisissez la fonction « installer » puis cliquez sur Exécuter et autorisez l'accès.
+ * Ensuite tout est automatique : une vérification toutes les 10 minutes.
+ */
+const CLE = 'COLLEZ_ICI_LA_CLE_ROBOT_DRIVE';
+const SERVEUR = 'https://osfxqudjkforfzfsdrub.supabase.co/functions/v1/agents/drive_ingest';
+// Dossiers synchronisés (id visible dans l'adresse du dossier). Par défaut : DINA CRÉATION.
+const DOSSIERS = ['1dIxdjpFldSSOzWWUE3xiYIynJ5iE7r1O'];
+
+const MAX_TEXTE = 150000;      // caractères gardés par document
+const MAX_LOT = 1500000;       // taille maximale d'un envoi
+const DUREE_MAX = 4.5 * 60000; // Google coupe un script à 6 minutes
+
+function installer() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'synchroniser') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('synchroniser').timeBased().everyMinutes(10).create();
+  synchroniser();
+}
+
+function synchroniser() {
+  if (!CLE || CLE.indexOf('COLLEZ_ICI') === 0) throw new Error('Collez la clé Robot Drive dans la constante CLE.');
+  const verrou = LockService.getScriptLock();
+  if (!verrou.tryLock(1000)) return; // une synchronisation tourne déjà
+  try {
+    const debut = Date.now();
+    const connus = {};
+    envoyer_({ action: 'state' }).docs.forEach(function (d) { connus[d[0]] = { modifie: d[1] ? Date.parse(d[1]) : 0, chemin: d[2] || '' }; });
+
+    const vus = {}, aTraiter = [];
+    DOSSIERS.forEach(function (id) { const f = DriveApp.getFolderById(id); parcourir_(f, f.getName(), vus, aTraiter, connus); });
+    const supprimes = Object.keys(connus).filter(function (id) { return !vus[id]; });
+
+    let lot = [], taille = 0, restants = aTraiter.length, premier = true;
+    const pousser = function (fin) {
+      if (!lot.length && !(premier && supprimes.length) && !fin) return;
+      envoyer_({ files: lot, removed: premier ? supprimes : [], done: fin && restants === 0, pending: restants });
+      premier = false; lot = []; taille = 0;
+    };
+    for (let i = 0; i < aTraiter.length; i++) {
+      if (Date.now() - debut > DUREE_MAX) break;
+      const e = aTraiter[i];
+      const txt = texte_(e.fichier).slice(0, MAX_TEXTE);
+      lot.push({ id: e.id, name: e.fichier.getName(), path: e.chemin, mime: e.fichier.getMimeType(), url: e.fichier.getUrl(), size: e.fichier.getSize(), modified: e.fichier.getLastUpdated().toISOString(), content: txt });
+      taille += txt.length + 500;
+      restants--;
+      if (taille > MAX_LOT || lot.length >= 15) pousser(false);
+    }
+    pousser(true);
+  } finally {
+    verrou.releaseLock();
+  }
+}
+
+function parcourir_(dossier, chemin, vus, aTraiter, connus) {
+  const fichiers = dossier.getFiles();
+  while (fichiers.hasNext()) {
+    const f = fichiers.next();
+    if (f.isTrashed() || f.getMimeType() === 'application/vnd.google-apps.shortcut') continue;
+    const id = f.getId();
+    vus[id] = true;
+    const k = connus[id];
+    if (!k || k.chemin !== chemin || Math.abs(k.modifie - f.getLastUpdated().getTime()) > 1000) aTraiter.push({ id: id, fichier: f, chemin: chemin });
+  }
+  const sous = dossier.getFolders();
+  while (sous.hasNext()) {
+    const d = sous.next();
+    if (!d.isTrashed()) parcourir_(d, chemin + '/' + d.getName(), vus, aTraiter, connus);
+  }
+}
+
+const CONVERSION = {
+  'application/pdf': MimeType.GOOGLE_DOCS,
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': MimeType.GOOGLE_DOCS,
+  'application/msword': MimeType.GOOGLE_DOCS,
+  'application/vnd.oasis.opendocument.text': MimeType.GOOGLE_DOCS,
+  'application/rtf': MimeType.GOOGLE_DOCS,
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': MimeType.GOOGLE_SHEETS,
+  'application/vnd.ms-excel': MimeType.GOOGLE_SHEETS,
+  'application/vnd.oasis.opendocument.spreadsheet': MimeType.GOOGLE_SHEETS,
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': MimeType.GOOGLE_SLIDES,
+  'application/vnd.ms-powerpoint': MimeType.GOOGLE_SLIDES,
+};
+
+function texte_(f) {
+  const mime = f.getMimeType(), id = f.getId();
+  try {
+    if (mime === MimeType.GOOGLE_DOCS) return DocumentApp.openById(id).getBody().getText();
+    if (mime === MimeType.GOOGLE_SHEETS) return feuilles_(SpreadsheetApp.openById(id));
+    if (mime === MimeType.GOOGLE_SLIDES) return diapos_(SlidesApp.openById(id));
+    if (/^text\//.test(mime) || /json|csv|xml|markdown/.test(mime)) return f.getBlob().getDataAsString();
+    if (CONVERSION[mime] && f.getSize() < 20 * 1024 * 1024) return converti_(id, CONVERSION[mime]);
+  } catch (e) {
+    console.warn('Lecture impossible : ' + f.getName() + ' : ' + e.message);
+  }
+  return ''; // images, vidéos, etc. : seules les informations du fichier sont envoyées
+}
+
+// Copie temporaire convertie au format Google (texte des PDF compris), lue puis mise à la corbeille.
+function converti_(id, cible) {
+  const jeton = ScriptApp.getOAuthToken();
+  const r = UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files/' + id + '/copy?ocrLanguage=fr&fields=id', {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + jeton },
+    payload: JSON.stringify({ mimeType: cible, name: 'tmp-index-dina', parents: ['root'] }),
+  });
+  if (r.getResponseCode() !== 200) { console.warn('Conversion refusée (' + r.getResponseCode() + ')'); return ''; }
+  const copie = JSON.parse(r.getContentText()).id;
+  try {
+    if (cible === MimeType.GOOGLE_DOCS) return DocumentApp.openById(copie).getBody().getText();
+    if (cible === MimeType.GOOGLE_SHEETS) return feuilles_(SpreadsheetApp.openById(copie));
+    return diapos_(SlidesApp.openById(copie));
+  } finally {
+    DriveApp.getFileById(copie).setTrashed(true);
+  }
+}
+
+function feuilles_(classeur) {
+  let t = '';
+  classeur.getSheets().slice(0, 10).forEach(function (s) {
+    const v = s.getDataRange().getDisplayValues().slice(0, 1000);
+    t += '## ' + s.getName() + '\n' + v.map(function (l) { return l.join(' | '); }).join('\n') + '\n\n';
+  });
+  return t;
+}
+
+function diapos_(pres) {
+  let t = '';
+  pres.getSlides().forEach(function (s, i) {
+    t += '## Diapositive ' + (i + 1) + '\n';
+    s.getShapes().forEach(function (sh) { try { t += sh.getText().asString() + '\n'; } catch (e) { /* forme sans texte */ } });
+  });
+  return t;
+}
+
+function envoyer_(donnees) {
+  const r = UrlFetchApp.fetch(SERVEUR, {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    headers: { 'x-agents-key': CLE },
+    payload: JSON.stringify(donnees),
+  });
+  if (r.getResponseCode() !== 200) throw new Error('Serveur DINA ' + r.getResponseCode() + ' : ' + r.getContentText().slice(0, 300));
+  return JSON.parse(r.getContentText());
+}
 </script></body></html>
