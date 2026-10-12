@@ -62,7 +62,8 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const store=()=>localStorage.getItem('dina_key')?localStorage:sessionStorage;
 const get=k=>{try{return localStorage.getItem(k)||sessionStorage.getItem(k)||''}catch(e){return ''}};
-let URLB=get('dina_url')||DEFAULT_URL,KEY=get('dina_key'),S=null,tab='hub',busy=false,loading=false,lastOk=0,online=true,newKey=null,USERS=null,W=null,WERR='',pq='',pown='',esub='taches',emine=false;
+const OKU=u=>/^https:\/\/[a-z0-9-]+\.supabase\.co\/functions\/v1\/[a-z0-9_-]+\/?$/i.test(u);
+let URLB=OKU(get('dina_url'))?get('dina_url'):DEFAULT_URL,KEY=get('dina_key'),S=null,tab='hub',busy=false,loading=false,lastOk=0,online=true,newKey=null,USERS=null,W=null,WERR='',pq='',pown='',esub='taches',emine=false;
 const pd=d=>!d?'':new Date(d).toLocaleDateString('sv-SE',{timeZone:'Europe/Paris'});
 const ph=d=>!d?'':new Date(d).toLocaleTimeString('fr-FR',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit'});
 const dm=d=>pd(d).slice(5).split('-').reverse().join('/');
@@ -81,14 +82,14 @@ function login(msg){
  <label for="k">Clé d'accès</label><input type="password" id="k" autocomplete="current-password"><br><br>
  <label><input type="checkbox" id="rm"> Rester connecté sur cet appareil</label>
  <div class="row"><button class="btn ok" id="go">Se connecter</button></div></div>`;
- const go=()=>act($('#go'),async()=>{URLB=$('#u').value.trim();KEY=$('#k').value.trim();const keep=$('#rm').checked;
+ const go=()=>act($('#go'),async()=>{URLB=$('#u').value.trim();if(!OKU(URLB)){toast('Adresse refusée : elle doit être en https et pointer vers votre projet Supabase');return}KEY=$('#k').value.trim();const keep=$('#rm').checked;
   try{localStorage.removeItem('dina_key');sessionStorage.removeItem('dina_key')}catch(e){}
   const st=keep?localStorage:sessionStorage;st.setItem('dina_url',URLB);st.setItem('dina_key',KEY);busy=false;await load(true)});
  $('#go').onclick=go;$('#k').onkeydown=e=>{if(e.key==='Enter')go()}}
 function logout(){try{localStorage.removeItem('dina_key');sessionStorage.removeItem('dina_key')}catch(e){}KEY='';S=null;login()}
 async function load(first){
  if(loading)return;loading=true;
- try{S=await api('state');try{W=await api('ws');WERR=''}catch(e2){if(e2.status===401)throw e2;WERR=e2.message}lastOk=Date.now();online=true;render()}
+ try{S=await api('state');S.approvals=S.approvals||[];S.tasks=S.tasks||[];S.prompts=S.prompts||[];S.messages=S.messages||[];S.runs=S.runs||[];S.audit=S.audit||[];S.schedule=S.schedule||{};S.real=S.real||{orders:0,client_messages:0};S.settings={daily_budget_usd:5,...(S.settings||{})};try{W=await api('ws');W.leads=W.leads||[];W.tasks=W.tasks||[];W.notes=W.notes||[];W.team=W.team||[];WERR=''}catch(e2){if(e2.status===401)throw e2;WERR=e2.message}lastOk=Date.now();online=true;render()}
  catch(e){online=false;if(e.status===401||!KEY){logout();if(e.status===401)login('Clé refusée');return}
   if(!S)$('#app').innerHTML=`<div class="card" role="alert">${esc(e.message)}<div class="row"><button class="btn" id="rt">Réessayer</button><button class="btn" id="lo">Reconnexion</button></div></div>`,$('#rt').onclick=()=>load(),$('#lo').onclick=logout;
   else{toast(e.message);head()}}
@@ -96,7 +97,7 @@ async function load(first){
 function head(){
  if(!S)return;const set=S.settings;$('#out').hidden=false;$('#out').onclick=logout;
  $('#me').textContent=`${S.me.name} · ${S.me.role==='owner'?'propriétaire':'associé'}`;
- const pct=Math.min(100,S.spent_today/set.daily_budget_usd*100);
+ const pct=set.daily_budget_usd>0?Math.min(100,S.spent_today/set.daily_budget_usd*100):(S.spent_today>0?100:0);
  $('#cost').innerHTML=`Aujourd'hui ~${S.spent_today.toFixed(2)} $ / ${set.daily_budget_usd} $${pct>=80?' ⚠':''}`;
  $('#sync').innerHTML=`<span class="live ${online?'':'off'}"></span>${online?'Synchronisé '+ph(new Date(lastOk)):'Hors ligne, dernière synchro '+ph(new Date(lastOk))}`;
  const st=$('#stop');st.hidden=false;st.textContent=set.kill_switch?'Reprendre les agents':'Tout arrêter';st.className='btn '+(set.kill_switch?'ok':'ko');
@@ -116,7 +117,7 @@ function nextRun(set){const hh=set.mission_hour??8;const now=new Date();const ns
  for(let i=0;i<9;i++){const key=pd(new Date(now.getTime()+i*864e5));const wd=new Date(key+'T12:00:00Z').getUTCDay();const ag=Object.keys(S.schedule).filter(a=>(S.schedule[a]||[]).includes(wd));if(ag.length&&key+`T${String(hh).padStart(2,'0')}:00:00`>ns)return{key,hh,ag}}return null}
 function stats(){
  const w=Date.now()-7*864e5,tk=S.tasks;const rec=tk.filter(t=>new Date(t.created_at)>w);
- const dec=S.approvals.filter(a=>['approved','edited','rejected'].includes(a.status)&&a.kind!=='prompt_change');
+ const dec=S.approvals.filter(a=>['approved','edited','rejected'].includes(a.status)&&a.kind!=='prompt_change'&&a.decided_at&&new Date(a.decided_at)>w);
  const acc=dec.length?Math.round(dec.filter(a=>a.status!=='rejected').length/dec.length*100):null;
  const by={};Object.keys(AG).forEach(a=>by[a]={done:0,fail:0,cost:0,ok:0,dec:0});
  rec.forEach(t=>{const b=by[t.agent];if(!b)return;if(t.status==='failed')b.fail++;else if(t.status==='done'||t.status==='waiting_approval')b.done++});
@@ -139,9 +140,9 @@ function vHub(){
  const set=S.settings,sch=S.schedule,today=pd(S.server_now),tk=S.tasks,st=stats();
  const t0=new Date(today+'T12:00:00Z');const dow=(t0.getUTCDay()+6)%7;const start=new Date(t0.getTime()-dow*864e5);
  const days=[...Array(14)].map((_,i)=>new Date(start.getTime()+i*864e5));const nr=nextRun(set);
- const pct=Math.min(100,S.spent_today/set.daily_budget_usd*100);
+ const pct=set.daily_budget_usd>0?Math.min(100,S.spent_today/set.daily_budget_usd*100):(S.spent_today>0?100:0);
  const kp=(v,l,al)=>`<div class="kpi ${al?'al':''}"><b>${esc(v)}</b><span>${esc(l)}</span></div>`;
- const kpis=`<div class="kpis">${kp(st.running,'missions en cours')}${kp(st.waiting,'à valider par vous',st.waiting>=10)}${kp(st.failed,'échecs sur 7 jours',st.failed>0)}${kp(st.done,'terminées sur 7 jours')}${kp(st.acc===null?'n/a':st.acc+' %','taux d\'acceptation')}
+ const kpis=`<div class="kpis">${kp(st.running,'missions en cours')}${kp(st.waiting,'à valider par vous',st.waiting>=10)}${kp(st.failed,'échecs sur 7 jours',st.failed>0)}${kp(st.done,'terminées sur 7 jours')}${kp(st.acc===null?'n/a':st.acc+' %','taux d\'acceptation sur 7 jours')}
  <div class="kpi"><b>${S.spent_today.toFixed(2)} $</b><span>coût aujourd'hui (${S.spent_week.toFixed(2)} $ sur 7 j)</span><div class="bar ${pct>=80?'w':''}"><i style="width:${pct}%"></i></div></div>
  ${kp(S.real.orders,'commandes réelles (site)')}${kp(S.real.client_messages,'messages clients reçus')}</div>`;
  const poles=`<div class="card"><b>Pôles</b><table><tr><th>Pôle</th><th>Agents</th><th>Missions 7 j</th><th>Coût 7 j</th></tr>${Object.entries(POLES).map(([p,ags])=>`<tr><td>${esc(p)}</td><td>${ags.map(a=>esc(AG[a].split(' ')[0])).join(', ')}</td><td>${ags.reduce((s,a)=>s+st.by[a].done+st.by[a].fail,0)}</td><td>${ags.reduce((s,a)=>s+st.by[a].cost,0).toFixed(2)} $</td></tr>`).join('')}</table></div>`;
@@ -234,7 +235,7 @@ function vValider(pend){const v=$('#v');if(!pend.length){v.innerHTML='<div class
  v.innerHTML=pend.map(a=>`<div class="card" data-id="${esc(a.id)}"><span class="tag">${esc(KIND[a.kind]||a.kind)}</span><span class="tag">${esc(AG[a.agent]||a.agent)}</span><span class="tag">Risque ${esc(RISK[a.kind]||'Éditorial')}</span>${(a.flags||[]).map(f=>`<span class="tag flag">${esc(f)}</span>`).join('')}
  <h3 style="margin:8px 0">${esc(a.title)}</h3>${a.kind==='prompt_change'?`<pre>${esc(a.content)}</pre>`:`<textarea rows="${Math.min(14,Math.max(4,a.content.split('\n').length+2))}" class="ed" aria-label="Contenu à valider">${esc(a.content)}</textarea>`}
  ${a.options?`<details><summary>Options / contexte</summary><pre>${esc(a.options)}</pre></details>`:''}${a.recommendation?`<p class="mut">Recommandation : ${esc(a.recommendation)}</p>`:''}
- ${['prix_ou_promo','juridique','budget'].includes(a.kind)?'<p class="mut"><b>Validation renforcée :</b> prix, juridique et budget n\'engagent DINA qu\'après relecture attentive des deux associés.</p>':''}
+ ${['prix_ou_promo','juridique','budget'].includes(a.kind)?'<p class="mut"><b>Décision sensible :</b> relisez attentivement avant de valider. Elle n\'est pas encore soumise à une double validation automatique.</p>':''}
  <input type="text" class="cm" aria-label="Commentaire" placeholder="Commentaire (obligatoire pour que l'agent refasse mieux)" style="margin-top:8px"><div class="row"><button class="btn ok" data-d="approve">${a.kind==='prompt_change'?'Appliquer':'Valider'}</button><button class="btn ko" data-d="reject">Refuser et refaire</button></div></div>`).join('');
  v.querySelectorAll('.card').forEach(c=>c.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>act(b,async()=>{const d=b.dataset.d,cm=c.querySelector('.cm').value.trim();if(d==='reject'&&!cm&&!confirm("Refuser sans commentaire ? L'agent ne refera pas la tâche."))return;await api('decide',{id:+c.dataset.id,decision:d,edited_content:c.querySelector('.ed')?.value,comment:cm});toast(d==='approve'?'Validé':'Refusé, retour à l\'agent');await load()})))}
 function vDemander(){const ags=Object.keys(AG).filter(a=>a!=='orchestrateur');
@@ -254,7 +255,7 @@ function vLivrables(){const t=S.tasks.filter(x=>x.status==='done'&&x.result);
  $('#v').innerHTML=t.length?t.map(x=>`<div class="card" data-id="${esc(x.id)}"><span class="tag">${esc(AG[x.agent]||x.agent)}</span> <b>${esc(x.title)}</b><pre>${esc(String(x.result).slice(0,500))}${x.result.length>500?'…':''}</pre><div class="row"><button class="btn" data-open="${esc(x.id)}">Voir en entier</button><button class="btn ${x.rating===1?'ok':''}" data-r="1">Bien</button><button class="btn ${x.rating===-1?'ko':''}" data-r="-1">À revoir</button></div></div>`).join(''):'<div class="card">Aucun livrable pour l\'instant.</div>';
  bindDetail();document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>act(b,async()=>{const id=+b.closest('.card').dataset.id,r=+b.dataset.r;const fb=r<0?prompt("Qu'est-ce qui ne va pas ? (les agents s'en serviront pour progresser)"):'';if(r<0&&fb===null)return;await api('rate',{id,rating:r,feedback:fb});await load()}))}
 function vAgents(){const by={};S.prompts.forEach(p=>(by[p.agent]??=[]).push(p));const st=stats(),owner=S.me.role==='owner';
- const perf=`<div class="card"><b>Performance (7 jours)</b><div style="overflow:auto"><table><tr><th>Agent</th><th>Terminées</th><th>Échecs</th><th>Acceptés</th><th>Coût</th><th>Coût moyen</th></tr>${Object.keys(AG).map(a=>{const b=st.by[a],n=b.done+b.fail;return `<tr><td>${esc(AG[a])}</td><td>${b.done}</td><td>${b.fail}</td><td>${b.dec?Math.round(b.ok/b.dec*100)+' %':'n/a'}</td><td>${b.cost.toFixed(2)} $</td><td>${n?(b.cost/n).toFixed(3)+' $':'n/a'}</td></tr>`}).join('')}</table></div><p class="mut">Un prompt plus long ou recommandé par un agent n'est pas meilleur en soi : jugez sur le taux d'acceptation et le coût.</p></div>`;
+ const perf=`<div class="card"><b>Performance (7 jours)</b><div style="overflow:auto"><table><tr><th>Agent</th><th>Terminées</th><th>Échecs</th><th>Acceptés (7 j)</th><th>Coût</th><th>Coût moyen</th></tr>${Object.keys(AG).map(a=>{const b=st.by[a],n=b.done+b.fail;return `<tr><td>${esc(AG[a])}</td><td>${b.done}</td><td>${b.fail}</td><td>${b.dec?Math.round(b.ok/b.dec*100)+' %':'n/a'}</td><td>${b.cost.toFixed(2)} $</td><td>${n?(b.cost/n).toFixed(3)+' $':'n/a'}</td></tr>`}).join('')}</table></div><p class="mut">Un prompt plus long ou recommandé par un agent n'est pas meilleur en soi : jugez sur le taux d'acceptation et le coût.</p></div>`;
  $('#v').innerHTML=perf+'<p class="mut">Les agents proposent chaque semaine une amélioration d\'après vos validations. Rien ne change sans votre accord, retour arrière possible.</p>'+Object.keys(AG).map(a=>{const vs=by[a]||[];const act=vs.find(p=>p.status==='active');return `<div class="card"><b>${esc(AG[a])}</b> <span class="tag">version active : v${esc(act?act.version:'?')}</span><details><summary>Versions (${vs.length})</summary>${vs.map(p=>`<div style="margin-top:10px"><span class="tag">v${esc(p.version)}</span><span class="tag">${esc(p.status)}</span><span class="mut">${esc(p.created_by)}</span>${p.rationale?`<div class="mut">${esc(p.rationale)}</div>`:''}<details><summary>Voir le prompt</summary><pre>${esc(p.prompt)}</pre></details>${p.status==='archived'?`<button class="btn" data-pv="${esc(p.id)}">Revenir à cette version</button>`:''}</div>`).join('')}</details></div>`}).join('')+
  `<div class="card"><label for="bud">Plafond de dépense par jour (dollars, estimation, appliqué par le serveur)</label><input type="number" id="bud" step="0.5" min="0" value="${esc(S.settings.daily_budget_usd)}"><div class="row"><button class="btn" id="sb">Enregistrer</button><button class="btn" id="rv">Lancer la relecture maintenant</button></div></div>`;
  document.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>act(b,async()=>{if(confirm('Revenir à cette version ?')){await api('prompt',{id:+b.dataset.pv});await load()}}));
