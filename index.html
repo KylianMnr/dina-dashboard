@@ -99,7 +99,7 @@ function head(){
  $('#me').textContent=`${S.me.name} · ${S.me.role==='owner'?'propriétaire':'associé'}`;
  const pct=set.daily_budget_usd>0?Math.min(100,S.spent_today/set.daily_budget_usd*100):(S.spent_today>0?100:0);
  $('#cost').innerHTML=`Aujourd'hui ~${S.spent_today.toFixed(2)} $ / ${set.daily_budget_usd} $${pct>=80?' ⚠':''}`;
- $('#sync').innerHTML=`<span class="live ${online?'':'off'}"></span>${online?'Synchronisé '+ph(new Date(lastOk)):'Hors ligne, dernière synchro '+ph(new Date(lastOk))}`;
+ $('#sync').innerHTML=`<span class="live ${online?'':'off'}"></span>${online?'Synchronisé '+ph(new Date(lastOk)):'Hors ligne, dernière synchro '+ph(new Date(lastOk))}${WERR?' · espace de travail non synchronisé':''}`;
  const st=$('#stop');st.hidden=false;st.textContent=set.kill_switch?'Reprendre les agents':'Tout arrêter';st.className='btn '+(set.kill_switch?'ok':'ko');
  st.onclick=()=>act(st,async()=>{if(!set.kill_switch&&!confirm("Arrêt d'urgence : plus aucune nouvelle mission, et les tâches en cours s'arrêtent à la prochaine étape. Continuer ?"))return;await api('settings',{kill_switch:!set.kill_switch});toast(set.kill_switch?'Agents relancés':'Agents arrêtés');await load()})}
 function render(){
@@ -119,18 +119,18 @@ function stats(){
  const w=Date.now()-7*864e5,tk=S.tasks;const rec=tk.filter(t=>new Date(t.created_at)>w);
  const dec=S.approvals.filter(a=>['approved','edited','rejected'].includes(a.status)&&a.kind!=='prompt_change'&&a.decided_at&&new Date(a.decided_at)>w);
  const acc=dec.length?Math.round(dec.filter(a=>a.status!=='rejected').length/dec.length*100):null;
- const by={};Object.keys(AG).forEach(a=>by[a]={done:0,fail:0,cost:0,ok:0,dec:0});
- rec.forEach(t=>{const b=by[t.agent];if(!b)return;if(t.status==='failed')b.fail++;else if(t.status==='done'||t.status==='waiting_approval')b.done++});
- (S.runs||[]).forEach(r=>{const b=by[r.agent];if(b)b.cost+=Number(r.cost_usd)});
+ const by={};Object.keys(AG).forEach(a=>by[a]={done:0,fail:0,wait:0,cost:0,ok:0,dec:0});
+ rec.forEach(t=>{const b=by[t.agent];if(!b)return;if(t.status==='failed')b.fail++;else if(t.status==='waiting_approval')b.wait++;else if(t.status==='done')b.done++});
+ (S.runs||[]).filter(r=>new Date(r.created_at)>w).forEach(r=>{const b=by[r.agent];if(b)b.cost+=Number(r.cost_usd)});
  dec.forEach(a=>{const b=by[a.agent];if(b){b.dec++;if(a.status!=='rejected')b.ok++}});
- return{running:tk.filter(t=>t.status==='running').length,waiting:S.approvals.filter(a=>a.status==='pending').length,failed:rec.filter(t=>t.status==='failed').length,done:rec.filter(t=>t.status==='done'||t.status==='waiting_approval').length,acc,by}}
+ return{running:tk.filter(t=>t.status==='running').length,waiting:S.approvals.filter(a=>a.status==='pending').length,failed:rec.filter(t=>t.status==='failed').length,done:rec.filter(t=>t.status==='done').length,acc,by}}
 
 function vObj(){
  if(!W)return `<div class="card"><b>Pipeline et objectifs</b><p class="mut">${esc(WERR||'Indisponible')}</p></div>`;
  const today=pd(S.server_now),mo=today.slice(0,7),wk=pd(new Date(new Date(S.server_now).getTime()-7*864e5));
  const open=W.leads.filter(l=>!['gagne','perdu'].includes(l.status)),late=open.filter(l=>l.next_relance&&l.next_relance<=today);
- const won=W.leads.filter(l=>l.status==='gagne'&&pd(l.updated_at).slice(0,7)===mo),ca=won.reduce((s,l)=>s+Number(l.valeur||0),0);
- const ct=W.leads.filter(l=>l.last_interaction&&pd(l.last_interaction)>=wk).length;
+ const won=W.leads.filter(l=>l.status==='gagne'&&pd(l.won_at||l.updated_at).slice(0,7)===mo),ca=won.reduce((s,l)=>s+Number(l.valeur||0),0);
+ const ct=W.leads.reduce((n,l)=>n+(l.timeline||[]).filter(t=>t.type==='contact'&&t.date&&pd(t.date)>=wk).length,0);
  const mine=W.tasks.filter(t=>t.assignee===S.me.name&&t.status!=='done').length;
  const O=W.objectives||{},bar=(v,o)=>o>0?`<div class="bar ${v>=o?'':'w'}" style="--x:1"><i style="width:${Math.min(100,v/o*100)}%;${v>=o?'':'background:var(--or)'}"></i></div>`:'';
  const kp=(v,l,al,b)=>`<div class="kpi ${al?'al':''}"><b>${esc(v)}</b><span>${esc(l)}</span>${b||''}</div>`;
@@ -145,7 +145,7 @@ function vHub(){
  const kpis=`<div class="kpis">${kp(st.running,'missions en cours')}${kp(st.waiting,'à valider par vous',st.waiting>=10)}${kp(st.failed,'échecs sur 7 jours',st.failed>0)}${kp(st.done,'terminées sur 7 jours')}${kp(st.acc===null?'n/a':st.acc+' %','taux d\'acceptation sur 7 jours')}
  <div class="kpi"><b>${S.spent_today.toFixed(2)} $</b><span>coût aujourd'hui (${S.spent_week.toFixed(2)} $ sur 7 j)</span><div class="bar ${pct>=80?'w':''}"><i style="width:${pct}%"></i></div></div>
  ${kp(S.real.orders,'commandes réelles (site)')}${kp(S.real.client_messages,'messages clients reçus')}</div>`;
- const poles=`<div class="card"><b>Pôles</b><table><tr><th>Pôle</th><th>Agents</th><th>Missions 7 j</th><th>Coût 7 j</th></tr>${Object.entries(POLES).map(([p,ags])=>`<tr><td>${esc(p)}</td><td>${ags.map(a=>esc(AG[a].split(' ')[0])).join(', ')}</td><td>${ags.reduce((s,a)=>s+st.by[a].done+st.by[a].fail,0)}</td><td>${ags.reduce((s,a)=>s+st.by[a].cost,0).toFixed(2)} $</td></tr>`).join('')}</table></div>`;
+ const poles=`<div class="card"><b>Pôles</b><table><tr><th>Pôle</th><th>Agents</th><th>Missions 7 j</th><th>Coût 7 j</th></tr>${Object.entries(POLES).map(([p,ags])=>`<tr><td>${esc(p)}</td><td>${ags.map(a=>esc(AG[a].split(' ')[0])).join(', ')}</td><td>${ags.reduce((s,a)=>s+st.by[a].done+st.by[a].fail+st.by[a].wait,0)}</td><td>${ags.reduce((s,a)=>s+st.by[a].cost,0).toFixed(2)} $</td></tr>`).join('')}</table></div>`;
  const info=set.kill_switch?'Les agents sont arrêtés.':set.auto_missions===false?'Missions automatiques en pause : les agents ne travaillent que sur demande.':nr?`Prochaines missions : ${DL[new Date(nr.key+'T12:00:00Z').getUTCDay()].toLowerCase()} ${nr.key.split('-').reverse().slice(0,2).join('/')} à ${String(nr.hh).padStart(2,'0')}h (${nr.ag.map(a=>esc(AG[a])).join(', ')}).`:'Aucune mission prévue.';
  const hrs=(id,v)=>`<select id="${id}">${[...Array(24)].map((_,i)=>`<option value="${i}" ${i===v?'selected':''}>${String(i).padStart(2,'0')}h</option>`).join('')}</select>`;
  const auto=`<div class="card"><b><span class="live"></span>Mises à jour automatiques des agents</b><p class="mut">${info} Relecture des agents : ${set.review_enabled===false?'en pause':DL[set.review_day??0].toLowerCase()+' à '+String(set.review_hour??18).padStart(2,'0')+'h'}. Heure de Paris, déclenchée par le serveur.</p>
@@ -255,7 +255,7 @@ function vLivrables(){const t=S.tasks.filter(x=>x.status==='done'&&x.result);
  $('#v').innerHTML=t.length?t.map(x=>`<div class="card" data-id="${esc(x.id)}"><span class="tag">${esc(AG[x.agent]||x.agent)}</span> <b>${esc(x.title)}</b><pre>${esc(String(x.result).slice(0,500))}${x.result.length>500?'…':''}</pre><div class="row"><button class="btn" data-open="${esc(x.id)}">Voir en entier</button><button class="btn ${x.rating===1?'ok':''}" data-r="1">Bien</button><button class="btn ${x.rating===-1?'ko':''}" data-r="-1">À revoir</button></div></div>`).join(''):'<div class="card">Aucun livrable pour l\'instant.</div>';
  bindDetail();document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>act(b,async()=>{const id=+b.closest('.card').dataset.id,r=+b.dataset.r;const fb=r<0?prompt("Qu'est-ce qui ne va pas ? (les agents s'en serviront pour progresser)"):'';if(r<0&&fb===null)return;await api('rate',{id,rating:r,feedback:fb});await load()}))}
 function vAgents(){const by={};S.prompts.forEach(p=>(by[p.agent]??=[]).push(p));const st=stats(),owner=S.me.role==='owner';
- const perf=`<div class="card"><b>Performance (7 jours)</b><div style="overflow:auto"><table><tr><th>Agent</th><th>Terminées</th><th>Échecs</th><th>Acceptés (7 j)</th><th>Coût</th><th>Coût moyen</th></tr>${Object.keys(AG).map(a=>{const b=st.by[a],n=b.done+b.fail;return `<tr><td>${esc(AG[a])}</td><td>${b.done}</td><td>${b.fail}</td><td>${b.dec?Math.round(b.ok/b.dec*100)+' %':'n/a'}</td><td>${b.cost.toFixed(2)} $</td><td>${n?(b.cost/n).toFixed(3)+' $':'n/a'}</td></tr>`}).join('')}</table></div><p class="mut">Un prompt plus long ou recommandé par un agent n'est pas meilleur en soi : jugez sur le taux d'acceptation et le coût.</p></div>`;
+ const perf=`<div class="card"><b>Performance (7 jours)</b><div style="overflow:auto"><table><tr><th>Agent</th><th>Terminées</th><th>Échecs</th><th>Acceptés (7 j)</th><th>Coût</th><th>Coût moyen</th></tr>${Object.keys(AG).map(a=>{const b=st.by[a],n=b.done+b.fail+b.wait;return `<tr><td>${esc(AG[a])}</td><td>${b.done}</td><td>${b.fail}</td><td>${b.dec?Math.round(b.ok/b.dec*100)+' %':'n/a'}</td><td>${b.cost.toFixed(2)} $</td><td>${n?(b.cost/n).toFixed(3)+' $':'n/a'}</td></tr>`}).join('')}</table></div><p class="mut">Un prompt plus long ou recommandé par un agent n'est pas meilleur en soi : jugez sur le taux d'acceptation et le coût.</p></div>`;
  $('#v').innerHTML=perf+'<p class="mut">Les agents proposent chaque semaine une amélioration d\'après vos validations. Rien ne change sans votre accord, retour arrière possible.</p>'+Object.keys(AG).map(a=>{const vs=by[a]||[];const act=vs.find(p=>p.status==='active');return `<div class="card"><b>${esc(AG[a])}</b> <span class="tag">version active : v${esc(act?act.version:'?')}</span><details><summary>Versions (${vs.length})</summary>${vs.map(p=>`<div style="margin-top:10px"><span class="tag">v${esc(p.version)}</span><span class="tag">${esc(p.status)}</span><span class="mut">${esc(p.created_by)}</span>${p.rationale?`<div class="mut">${esc(p.rationale)}</div>`:''}<details><summary>Voir le prompt</summary><pre>${esc(p.prompt)}</pre></details>${p.status==='archived'?`<button class="btn" data-pv="${esc(p.id)}">Revenir à cette version</button>`:''}</div>`).join('')}</details></div>`}).join('')+
  `<div class="card"><label for="bud">Plafond de dépense par jour (dollars, estimation, appliqué par le serveur)</label><input type="number" id="bud" step="0.5" min="0" value="${esc(S.settings.daily_budget_usd)}"><div class="row"><button class="btn" id="sb">Enregistrer</button><button class="btn" id="rv">Lancer la relecture maintenant</button></div></div>`;
  document.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>act(b,async()=>{if(confirm('Revenir à cette version ?')){await api('prompt',{id:+b.dataset.pv});await load()}}));
