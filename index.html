@@ -1,107 +1,196 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DINA Agents</title>
+<title>DINA Hub</title>
 <style>
-:root{--bg:#F6F0E6;--card:#fff;--ink:#2B1B18;--mut:#7a6a63;--br:#4A2E2A;--or:#C8A96E;--ok:#3d6b45;--ko:#a33a2e;--line:#e6dccb}
-@media(prefers-color-scheme:dark){:root{--bg:#1c1412;--card:#271c19;--ink:#f1e8da;--mut:#a89a90;--line:#3a2b27;--br:#e2c79a}}
+:root{--bg:#F6F0E6;--card:#fff;--ink:#2B1B18;--mut:#6f6058;--br:#4A2E2A;--or:#C8A96E;--ok:#3d6b45;--ko:#a33a2e;--line:#e6dccb;--wn:#f3d9a8}
+@media(prefers-color-scheme:dark){:root{--bg:#1c1412;--card:#271c19;--ink:#f1e8da;--mut:#b0a298;--line:#3a2b27;--br:#e2c79a;--wn:#5a4720}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
-header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-h1{font:600 20px Georgia,serif;margin:0;flex:1;color:var(--br)}
-main{max-width:900px;margin:0 auto;padding:16px}
+:focus-visible{outline:3px solid var(--or);outline-offset:2px}
+header{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+h1{font:600 20px Georgia,serif;margin:0;color:var(--br)}h2,h3{margin:0 0 6px}
+.sp{flex:1}main{max-width:1000px;margin:0 auto;padding:16px}
 nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 nav button,.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 12px;border-radius:8px;cursor:pointer;font:inherit}
-nav button.on{background:var(--br);color:var(--bg);border-color:var(--br)}
-.btn.ok{background:var(--ok);color:#fff;border-color:var(--ok)}.btn.ko{background:var(--ko);color:#fff;border-color:var(--ko)}
+nav button[aria-pressed=true]{background:var(--br);color:var(--bg);border-color:var(--br)}
+.btn.ok{background:var(--ok);color:#fff;border-color:var(--ok)}.btn.ko{background:var(--ko);color:#fff;border-color:var(--ko)}.btn:disabled{opacity:.5;cursor:wait}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
-.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--line);color:var(--mut);margin-right:6px}
-.flag{background:#f3d9a8;color:#5a3b00}.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-textarea,input{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--line);color:var(--mut);margin:0 6px 2px 0}
+.flag{background:var(--wn);color:var(--ink)}.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+label{font-size:13px;color:var(--mut)}
+textarea,input[type=text],input[type=password],input[type=number],input[type=date],select{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+select{width:auto}input[type=checkbox]{width:auto}
 pre{white-space:pre-wrap;word-wrap:break-word;font:inherit;margin:8px 0}
-.mut{color:var(--mut);font-size:13px}.bar{background:#c5b89f33;border-radius:8px;padding:8px 12px;font-size:13px}
-details summary{cursor:pointer;color:var(--mut)}
-@media(max-width:600px){main{padding:12px}}
-
+.mut{color:var(--mut);font-size:13px}details summary{cursor:pointer;color:var(--mut)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}.kpi b{display:block;font-size:22px;color:var(--br)}.kpi span{font-size:12px;color:var(--mut)}
+.kpi.al b{color:var(--ko)}
+.bar{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:var(--ok)}.bar.w i{background:var(--ko)}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.cal .d{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px;min-height:92px;font-size:12px;overflow:hidden}
 .cal .d.today{border-color:var(--or);box-shadow:0 0 0 1px var(--or)}.cal .h{font-weight:600;text-align:center;color:var(--mut);font-size:12px}.cal .n{color:var(--mut);margin-bottom:4px}
-.chip{display:block;border-radius:6px;padding:2px 6px;margin:2px 0;background:var(--line);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
-.chip.plan{background:transparent;border:1px dashed var(--mut);color:var(--mut)}.chip.done{background:#3d6b4533}.chip.wait{background:#f3d9a8;color:#5a3b00}.chip.fail{background:#a33a2e33}
-.chip.run{background:var(--or);color:#2B1B18;animation:p 1.2s infinite}@keyframes p{50%{opacity:.5}}
-.live{display:inline-block;width:8px;height:8px;border-radius:50%;background:#3d6b45;margin-right:6px;animation:p 1.2s infinite}
-.sg{display:grid;grid-template-columns:130px repeat(7,1fr);gap:4px;align-items:center;font-size:12px}.sg label{text-align:center}.sg input{width:auto}
-@media(max-width:600px){.cal{grid-template-columns:repeat(2,1fr)}.cal .h{display:none}.sg{grid-template-columns:90px repeat(7,1fr)}}
+.chip{display:block;width:100%;text-align:left;border:0;font:inherit;font-size:12px;border-radius:6px;padding:2px 6px;margin:2px 0;background:var(--line);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.chip.plan{background:transparent;border:1px dashed var(--mut);color:var(--mut);cursor:default}.chip.queue{border:1px solid var(--or);background:transparent}
+.chip.done{background:#3d6b4544}.chip.wait{background:var(--wn)}.chip.fail{background:#a33a2e44}.chip.run{background:var(--or);color:#2B1B18;animation:p 1.2s infinite}
+@keyframes p{50%{opacity:.55}}@media(prefers-reduced-motion:reduce){.chip.run,.live{animation:none}}
+.live{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:6px;animation:p 1.2s infinite}.live.off{background:var(--ko);animation:none}
+.sg{display:grid;grid-template-columns:110px repeat(7,1fr);gap:4px;align-items:center;font-size:12px}.sg label{text-align:center}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--mut);font-weight:600}
+.diff{display:grid;grid-template-columns:1fr 1fr;gap:8px}.diff>div{background:var(--bg);border-radius:8px;padding:8px}
+dialog{max-width:760px;width:94vw;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);padding:16px}dialog::backdrop{background:#0008}
+#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--br);color:var(--bg);padding:10px 16px;border-radius:10px;max-width:92vw;display:none;z-index:9}
+.keybox{background:var(--bg);border:1px dashed var(--or);border-radius:8px;padding:10px;word-break:break-all;font-family:monospace}
+@media(max-width:640px){main{padding:12px}.cal{grid-template-columns:repeat(2,1fr)}.cal .h{display:none}.sg{grid-template-columns:80px repeat(7,1fr)}.diff{grid-template-columns:1fr}table{font-size:12px}}
 </style></head><body>
-<header><h1>DINA · Agents</h1><span class="mut" id="cost"></span><button class="btn" id="stop"></button></header>
-<main id="app"></main>
+<header><h1>DINA · Hub</h1><span class="mut" id="me"></span><span class="sp"></span><span class="mut" id="sync" role="status"></span><span class="mut" id="cost"></span><button class="btn" id="stop" hidden></button><button class="btn" id="out" hidden>Déconnexion</button></header>
+<main id="app"></main><div id="toast" role="status" aria-live="polite"></div>
+<dialog id="dlg"><div id="dlgb"></div><div class="row"><button class="btn" id="dlgc">Copier</button><button class="btn" id="dlgx">Fermer</button></div></dialog>
 <script>
+const DEFAULT_URL='https://osfxqudjkforfzfsdrub.supabase.co/functions/v1/agents';
 const AG={orchestrateur:"Chef d'orchestre",produit:'Produit',contenu:'Contenu',reseaux:'Réseaux',site:'Site',ventes:'Ventes',visuels:'Visuels',marketing:'Marketing',operations:'Opérations',prospection:'Prospection B2B & Événements',veille:'Veille concurrentielle'};
-const KIND={publication:'Publication',message_client:'Message client',decision:'Décision',prix_ou_promo:'Prix / promo',budget:'Budget',juridique:'Juridique',projet:'Projet proposé',prospection:'Prospection',evenement:'Événement',autre:'Autre',prompt_change:'Amélioration d\'agent'};
-const $=s=>document.querySelector(s);const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-let URLB=localStorage.getItem('dina_url')||'',KEY=localStorage.getItem('dina_key')||'',S=null,tab='hub';
-async function api(r,body){const res=await fetch(URLB.replace(/\/$/,'')+'/'+r,{method:body?'POST':'GET',headers:{'content-type':'application/json','x-agents-key':KEY},body:body?JSON.stringify(body):undefined});const j=await res.json();if(!res.ok)throw new Error(j.error||res.status);return j}
-function login(){ $('#app').innerHTML=`<div class="card"><h3>Connexion</h3><p class="mut">Adresse de la fonction (ex. https://xxxx.supabase.co/functions/v1/agents) et clé du tableau de bord (AGENTS_KEY).</p><input id="u" placeholder="Adresse" value="${esc(URLB)}"><br><br><input id="k" type="password" placeholder="Clé"><div class="row"><button class="btn ok" id="go">Se connecter</button></div></div>`;
- $('#go').onclick=()=>{URLB=$('#u').value.trim();KEY=$('#k').value.trim();localStorage.setItem('dina_url',URLB);localStorage.setItem('dina_key',KEY);load()}}
-async function load(){try{S=await api('state');render()}catch(e){if(!URLB||!KEY||/Clé|401/.test(e.message))return login();$('#app').innerHTML=`<div class="card">Erreur : ${esc(e.message)} <div class="row"><button class="btn" onclick="login()">Reconnexion</button></div></div>`}}
-function render(){
- const pend=S.approvals.filter(a=>a.status==='pending');
- $('#cost').textContent=`Aujourd'hui ~${S.spent_today.toFixed(2)} $ / ${S.settings.daily_budget_usd} $ (estimation)`;
- $('#stop').textContent=S.settings.kill_switch?'Reprendre les agents':'Tout arrêter';$('#stop').className='btn '+(S.settings.kill_switch?'ok':'ko');
- $('#stop').onclick=async()=>{await api('settings',{kill_switch:!S.settings.kill_switch});load()};
- const tabs=[['hub','Hub'],['valider',`À valider (${pend.length})`],['demander','Demander'],['travail','Travail en cours'],['livrables','Livrables'],['agents','Agents et améliorations'],['historique','Historique']];
- $('#app').innerHTML=`<nav>${tabs.map(([k,l])=>`<button class="${tab===k?'on':''}" data-t="${k}">${l}</button>`).join('')}</nav><div id="v"></div>`;
- document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;render()});
- ({hub:vHub,valider:vValider,demander:vDemander,travail:vTravail,livrables:vLivrables,agents:vAgents,historique:vHist})[tab](pend)}
-
+const POLES={'Produit & B2C':['produit','site'],'Ventes B2B':['prospection','ventes','marketing'],'Marque & communauté':['reseaux','contenu','visuels'],'Direction & opérations':['orchestrateur','operations','veille']};
+const KIND={publication:'Publication',message_client:'Message client',decision:'Décision',prix_ou_promo:'Prix / promo',budget:'Budget',juridique:'Juridique',projet:'Projet proposé',prospection:'Prospection',evenement:'Événement',autre:'Autre',prompt_change:"Amélioration d'agent"};
+const RISK={prix_ou_promo:'Commercial',budget:'Opérationnel',juridique:'Opérationnel',message_client:'Commercial',publication:'Éditorial',projet:'Éditorial',prospection:'Commercial',evenement:'Commercial',decision:'Opérationnel',autre:'Éditorial',prompt_change:'Opérationnel'};
 const DJ=['dim','lun','mar','mer','jeu','ven','sam'],DL=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store=()=>localStorage.getItem('dina_key')?localStorage:sessionStorage;
+const get=k=>{try{return localStorage.getItem(k)||sessionStorage.getItem(k)||''}catch(e){return ''}};
+let URLB=get('dina_url')||DEFAULT_URL,KEY=get('dina_key'),S=null,tab='hub',busy=false,loading=false,lastOk=0,online=true,newKey=null,USERS=null;
 const pd=d=>!d?'':new Date(d).toLocaleDateString('sv-SE',{timeZone:'Europe/Paris'});
 const ph=d=>!d?'':new Date(d).toLocaleTimeString('fr-FR',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit'});
-let sel=null;
-function nextRun(set){const hh=set.mission_hour??8;const now=new Date();for(let i=0;i<9;i++){const t=new Date(now.getTime()+i*864e5);const key=pd(t);const wd=new Date(key+'T12:00:00Z').getUTCDay();const ag=Object.keys(S.schedule).filter(a=>(S.schedule[a]||[]).includes(wd));if(!ag.length)continue;const at=new Date(new Date(key+'T00:00:00Z').getTime());const when=new Date(key+`T${String(hh).padStart(2,'0')}:00:00`);const parisNowStr=now.toLocaleString('sv-SE',{timeZone:'Europe/Paris'}).replace(' ','T');if(key+`T${String(hh).padStart(2,'0')}:00:00`>parisNowStr)return{key,hh,ag}}return null}
+const dm=d=>pd(d).slice(5).split('-').reverse().join('/');
+function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',5000)}
+async function api(r,body){
+ const c=new AbortController();const to=setTimeout(()=>c.abort(),30000);
+ try{const res=await fetch(URLB.replace(/\/$/,'')+'/'+r,{method:body?'POST':'GET',headers:{'content-type':'application/json','x-agents-key':KEY},body:body?JSON.stringify(body):undefined,signal:c.signal});
+  const j=await res.json().catch(()=>({error:'Réponse illisible'}));if(!res.ok){const e=new Error(j.error||('Erreur '+res.status));e.status=res.status;throw e}return j}
+ catch(e){if(e.name==='AbortError')throw new Error('Délai dépassé, réessayez');if(e instanceof TypeError)throw new Error('Connexion impossible au serveur');throw e}finally{clearTimeout(to)}}
+async function act(btn,fn){if(busy)return;busy=true;if(btn)btn.disabled=true;try{await fn()}catch(e){toast(e.message)}finally{busy=false;if(btn)btn.disabled=false}}
+const editing=()=>document.activeElement&&document.activeElement.matches('textarea,input,select')||$('#dlg').open;
+function login(msg){
+ $('#stop').hidden=$('#out').hidden=true;$('#me').textContent='';
+ $('#app').innerHTML=`<div class="card" style="max-width:520px;margin:0 auto"><h2>Connexion</h2>${msg?`<p role="alert" style="color:var(--ko)">${esc(msg)}</p>`:''}<p class="mut">Votre clé personnelle vous est remise par le propriétaire. Elle n'est jamais envoyée ailleurs que vers votre serveur DINA.</p>
+ <label for="u">Adresse du serveur</label><input type="text" id="u" value="${esc(URLB)}" autocomplete="off"><br><br>
+ <label for="k">Clé d'accès</label><input type="password" id="k" autocomplete="current-password"><br><br>
+ <label><input type="checkbox" id="rm"> Rester connecté sur cet appareil</label>
+ <div class="row"><button class="btn ok" id="go">Se connecter</button></div></div>`;
+ const go=()=>act($('#go'),async()=>{URLB=$('#u').value.trim();KEY=$('#k').value.trim();const keep=$('#rm').checked;
+  try{localStorage.removeItem('dina_key');sessionStorage.removeItem('dina_key')}catch(e){}
+  const st=keep?localStorage:sessionStorage;st.setItem('dina_url',URLB);st.setItem('dina_key',KEY);busy=false;await load(true)});
+ $('#go').onclick=go;$('#k').onkeydown=e=>{if(e.key==='Enter')go()}}
+function logout(){try{localStorage.removeItem('dina_key');sessionStorage.removeItem('dina_key')}catch(e){}KEY='';S=null;login()}
+async function load(first){
+ if(loading)return;loading=true;
+ try{S=await api('state');lastOk=Date.now();online=true;render()}
+ catch(e){online=false;if(e.status===401||!KEY){logout();if(e.status===401)login('Clé refusée');return}
+  if(!S)$('#app').innerHTML=`<div class="card" role="alert">${esc(e.message)}<div class="row"><button class="btn" id="rt">Réessayer</button><button class="btn" id="lo">Reconnexion</button></div></div>`,$('#rt').onclick=()=>load(),$('#lo').onclick=logout;
+  else{toast(e.message);head()}}
+ finally{loading=false}}
+function head(){
+ if(!S)return;const set=S.settings;$('#out').hidden=false;$('#out').onclick=logout;
+ $('#me').textContent=`${S.me.name} · ${S.me.role==='owner'?'propriétaire':'associé'}`;
+ const pct=Math.min(100,S.spent_today/set.daily_budget_usd*100);
+ $('#cost').innerHTML=`Aujourd'hui ~${S.spent_today.toFixed(2)} $ / ${set.daily_budget_usd} $${pct>=80?' ⚠':''}`;
+ $('#sync').innerHTML=`<span class="live ${online?'':'off'}"></span>${online?'Synchronisé '+ph(new Date(lastOk)):'Hors ligne, dernière synchro '+ph(new Date(lastOk))}`;
+ const st=$('#stop');st.hidden=false;st.textContent=set.kill_switch?'Reprendre les agents':'Tout arrêter';st.className='btn '+(set.kill_switch?'ok':'ko');
+ st.onclick=()=>act(st,async()=>{if(!set.kill_switch&&!confirm("Arrêt d'urgence : plus aucune nouvelle mission, et les tâches en cours s'arrêtent à la prochaine étape. Continuer ?"))return;await api('settings',{kill_switch:!set.kill_switch});toast(set.kill_switch?'Agents relancés':'Agents arrêtés');await load()})}
+function render(){
+ head();const pend=S.approvals.filter(a=>a.status==='pending');
+ const tabs=[['hub','Hub'],['valider',`À valider (${pend.length})`],['demander','Demander'],['travail','Missions'],['livrables','Livrables'],['agents','Agents'],['historique','Historique'],['journal','Journal']];
+ if(S.me.role==='owner')tabs.push(['acces','Accès']);
+ const keep=editing()&&tab!=='hub'?null:1;
+ $('#app').innerHTML=`<nav aria-label="Sections">${tabs.map(([k,l])=>`<button aria-pressed="${tab===k}" data-t="${k}">${esc(l)}</button>`).join('')}</nav><div id="v"></div>`;
+ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;render()});
+ ({hub:vHub,valider:vValider,demander:vDemander,travail:vTravail,livrables:vLivrables,agents:vAgents,historique:vHist,journal:vJournal,acces:vAcces})[tab](pend)}
+function openDetail(t,body){$('#dlgb').innerHTML=`<h3>${esc(t)}</h3><pre>${esc(body||'(vide)')}</pre>`;$('#dlgc').onclick=()=>navigator.clipboard?.writeText(body||'').then(()=>toast('Copié'));$('#dlgx').onclick=()=>$('#dlg').close();$('#dlg').showModal()}
+const task=id=>S.tasks.find(x=>x.id==id);
+function bindDetail(root){(root||document).querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{const t=task(b.dataset.open);if(t)openDetail(`${AG[t.agent]||t.agent} : ${t.title}`,t.result)})}
+function nextRun(set){const hh=set.mission_hour??8;const now=new Date();const ns=now.toLocaleString('sv-SE',{timeZone:'Europe/Paris'}).replace(' ','T');
+ for(let i=0;i<9;i++){const key=pd(new Date(now.getTime()+i*864e5));const wd=new Date(key+'T12:00:00Z').getUTCDay();const ag=Object.keys(S.schedule).filter(a=>(S.schedule[a]||[]).includes(wd));if(ag.length&&key+`T${String(hh).padStart(2,'0')}:00:00`>ns)return{key,hh,ag}}return null}
+function stats(){
+ const w=Date.now()-7*864e5,tk=S.tasks;const rec=tk.filter(t=>new Date(t.created_at)>w);
+ const dec=S.approvals.filter(a=>['approved','edited','rejected'].includes(a.status)&&a.kind!=='prompt_change');
+ const acc=dec.length?Math.round(dec.filter(a=>a.status!=='rejected').length/dec.length*100):null;
+ const by={};Object.keys(AG).forEach(a=>by[a]={done:0,fail:0,cost:0,ok:0,dec:0});
+ rec.forEach(t=>{const b=by[t.agent];if(!b)return;if(t.status==='failed')b.fail++;else if(t.status==='done'||t.status==='waiting_approval')b.done++});
+ (S.runs||[]).forEach(r=>{const b=by[r.agent];if(b)b.cost+=Number(r.cost_usd)});
+ dec.forEach(a=>{const b=by[a.agent];if(b){b.dec++;if(a.status!=='rejected')b.ok++}});
+ return{running:tk.filter(t=>t.status==='running').length,waiting:S.approvals.filter(a=>a.status==='pending').length,failed:rec.filter(t=>t.status==='failed').length,done:rec.filter(t=>t.status==='done'||t.status==='waiting_approval').length,acc,by}}
 function vHub(){
- const set=S.settings,sch=S.schedule,today=pd(S.server_now),tk=S.tasks;
+ const set=S.settings,sch=S.schedule,today=pd(S.server_now),tk=S.tasks,st=stats();
  const t0=new Date(today+'T12:00:00Z');const dow=(t0.getUTCDay()+6)%7;const start=new Date(t0.getTime()-dow*864e5);
- const days=[...Array(14)].map((_,i)=>new Date(start.getTime()+i*864e5));
- const nr=nextRun(set);
- const auto=`<div class="card"><b><span class="live"></span>Mises à jour automatiques des agents</b>
- <p class="mut">${set.kill_switch?'Les agents sont arrêtés.':set.auto_missions===false?'Missions automatiques en pause : les agents ne travaillent que sur demande.':nr?`Prochaines missions : ${DL[new Date(nr.key+'T12:00:00Z').getUTCDay()].toLowerCase()} ${nr.key.split('-').reverse().slice(0,2).join('/')} à ${String(nr.hh).padStart(2,'0')}h (${nr.ag.map(a=>AG[a]).join(', ')}).`:'Aucune mission prévue.'}
- Relecture et amélioration des agents : ${set.review_enabled===false?'en pause':DL[set.review_day??0].toLowerCase()+' à '+String(set.review_hour??18).padStart(2,'0')+'h'}. Heure de Paris.</p>
- <div class="row" style="align-items:center"><label><input type="checkbox" id="am" ${set.auto_missions!==false?'checked':''} style="width:auto"> Missions automatiques actives</label>
- <label>Heure <select id="mh">${[...Array(24)].map((_,i)=>`<option value="${i}" ${i===(set.mission_hour??8)?'selected':''}>${String(i).padStart(2,'0')}h</option>`).join('')}</select></label></div>
- <div class="row" style="align-items:center"><label><input type="checkbox" id="re" ${set.review_enabled!==false?'checked':''} style="width:auto"> Relecture hebdomadaire active</label>
- <label>Jour <select id="rd">${DL.map((l,i)=>`<option value="${i}" ${i===(set.review_day??0)?'selected':''}>${l}</option>`).join('')}</select></label>
- <label>Heure <select id="rh">${[...Array(24)].map((_,i)=>`<option value="${i}" ${i===(set.review_hour??18)?'selected':''}>${String(i).padStart(2,'0')}h</option>`).join('')}</select></label></div>
- <details style="margin-top:10px"><summary>Jours de mission par agent</summary><div class="sg" style="margin-top:8px"><span></span>${[1,2,3,4,5,6,0].map(d=>`<b style="text-align:center">${DJ[d]}</b>`).join('')}${Object.keys(AG).map(a=>`<span>${AG[a].split(' ')[0]}</span>${[1,2,3,4,5,6,0].map(d=>`<label><input type="checkbox" data-a="${a}" data-d="${d}" ${(sch[a]||[]).includes(d)?'checked':''}></label>`).join('')}`).join('')}</div></details>
+ const days=[...Array(14)].map((_,i)=>new Date(start.getTime()+i*864e5));const nr=nextRun(set);
+ const pct=Math.min(100,S.spent_today/set.daily_budget_usd*100);
+ const kp=(v,l,al)=>`<div class="kpi ${al?'al':''}"><b>${esc(v)}</b><span>${esc(l)}</span></div>`;
+ const kpis=`<div class="kpis">${kp(st.running,'missions en cours')}${kp(st.waiting,'à valider par vous',st.waiting>=10)}${kp(st.failed,'échecs sur 7 jours',st.failed>0)}${kp(st.done,'terminées sur 7 jours')}${kp(st.acc===null?'n/a':st.acc+' %','taux d\'acceptation')}
+ <div class="kpi"><b>${S.spent_today.toFixed(2)} $</b><span>coût aujourd'hui (${S.spent_week.toFixed(2)} $ sur 7 j)</span><div class="bar ${pct>=80?'w':''}"><i style="width:${pct}%"></i></div></div>
+ ${kp(S.real.orders,'commandes réelles (site)')}${kp(S.real.client_messages,'messages clients reçus')}</div>
+ <p class="mut">Les indicateurs commerciaux (prospects, devis, marge) apparaîtront quand les données réelles existeront. Rien n'est simulé ici.</p>`;
+ const poles=`<div class="card"><b>Pôles</b><table><tr><th>Pôle</th><th>Agents</th><th>Missions 7 j</th><th>Coût 7 j</th></tr>${Object.entries(POLES).map(([p,ags])=>`<tr><td>${esc(p)}</td><td>${ags.map(a=>esc(AG[a].split(' ')[0])).join(', ')}</td><td>${ags.reduce((s,a)=>s+st.by[a].done+st.by[a].fail,0)}</td><td>${ags.reduce((s,a)=>s+st.by[a].cost,0).toFixed(2)} $</td></tr>`).join('')}</table></div>`;
+ const info=set.kill_switch?'Les agents sont arrêtés.':set.auto_missions===false?'Missions automatiques en pause : les agents ne travaillent que sur demande.':nr?`Prochaines missions : ${DL[new Date(nr.key+'T12:00:00Z').getUTCDay()].toLowerCase()} ${nr.key.split('-').reverse().slice(0,2).join('/')} à ${String(nr.hh).padStart(2,'0')}h (${nr.ag.map(a=>esc(AG[a])).join(', ')}).`:'Aucune mission prévue.';
+ const hrs=(id,v)=>`<select id="${id}">${[...Array(24)].map((_,i)=>`<option value="${i}" ${i===v?'selected':''}>${String(i).padStart(2,'0')}h</option>`).join('')}</select>`;
+ const auto=`<div class="card"><b><span class="live"></span>Mises à jour automatiques des agents</b><p class="mut">${info} Relecture des agents : ${set.review_enabled===false?'en pause':DL[set.review_day??0].toLowerCase()+' à '+String(set.review_hour??18).padStart(2,'0')+'h'}. Heure de Paris, déclenchée par le serveur.</p>
+ <div class="row"><label><input type="checkbox" id="am" ${set.auto_missions!==false?'checked':''}> Missions automatiques actives</label><label>Heure ${hrs('mh',set.mission_hour??8)}</label></div>
+ <div class="row"><label><input type="checkbox" id="re" ${set.review_enabled!==false?'checked':''}> Relecture hebdomadaire active</label><label>Jour <select id="rd">${DL.map((l,i)=>`<option value="${i}" ${i===(set.review_day??0)?'selected':''}>${l}</option>`).join('')}</select></label><label>Heure ${hrs('rh',set.review_hour??18)}</label></div>
+ <details style="margin-top:10px"><summary>Jours de mission par agent</summary><div class="sg" style="margin-top:8px"><span></span>${[1,2,3,4,5,6,0].map(d=>`<b style="text-align:center">${DJ[d]}</b>`).join('')}${Object.keys(AG).map(a=>`<span>${esc(AG[a].split(' ')[0])}</span>${[1,2,3,4,5,6,0].map(d=>`<label><input type="checkbox" data-a="${a}" data-d="${d}" aria-label="${esc(AG[a])} ${DL[d]}" ${(sch[a]||[]).includes(d)?'checked':''}></label>`).join('')}`).join('')}</div></details>
  <div class="row"><button class="btn ok" id="svauto">Enregistrer</button><button class="btn" id="ms2">Lancer les missions du jour maintenant</button></div></div>`;
  const head=['lun','mar','mer','jeu','ven','sam','dim'].map(x=>`<div class="h">${x}</div>`).join('');
+ const chip=(c,t,l)=>`<button class="chip ${c}" data-open="${esc(t.id)}" title="${esc(l+' : '+t.title)}">${esc(AG[t.agent]?.split(' ')[0]||t.agent)} · ${esc(l)}</button>`;
  const cells=days.map(dt=>{const key=pd(dt.toISOString());const wd=dt.getUTCDay();
   const done=tk.filter(t=>t.finished_at&&pd(t.finished_at)===key&&['done','waiting_approval','failed'].includes(t.status));
-  const run=tk.filter(t=>t.status==='running'&&key===today);
+  const run=key===today?tk.filter(t=>t.status==='running'):[];const q=key===today?tk.filter(t=>t.status==='todo'):[];
   const had=new Set(tk.filter(t=>t.source==='mission'&&pd(t.created_at)===key).map(t=>t.agent));
   const plan=key>=today&&set.auto_missions!==false?Object.keys(sch).filter(a=>(sch[a]||[]).includes(wd)&&!had.has(a)):[];
-  const chip=(c,t,tx)=>`<span class="chip ${c}" data-id="${t.id}" title="${esc(t.title)}">${esc(AG[t.agent]?.split(' ')[0]||t.agent)} · ${esc(tx||t.title)}</span>`;
-  return `<div class="d ${key===today?'today':''}"><div class="n">${key.slice(8)}/${key.slice(5,7)}${key===today?' · aujourd\'hui':''}</div>${run.map(t=>chip('run',t)).join('')}${done.map(t=>chip(t.status==='failed'?'fail':t.status==='waiting_approval'?'wait':'done',t)).join('')}${plan.map(a=>`<span class="chip plan" title="Prévu à ${String(set.mission_hour??8).padStart(2,'0')}h">${esc(AG[a].split(' ')[0])} · prévu</span>`).join('')}</div>`}).join('');
+  return `<div class="d ${key===today?'today':''}"><div class="n">${key.slice(8)}/${key.slice(5,7)}${key===today?" · aujourd'hui":''}</div>${run.map(t=>chip('run',t,'en cours')).join('')}${q.map(t=>chip('queue',t,'en file')).join('')}${done.map(t=>chip(t.status==='failed'?'fail':t.status==='waiting_approval'?'wait':'done',t,t.status==='failed'?'échec':t.status==='waiting_approval'?'à valider':'terminé')).join('')}${plan.map(a=>`<span class="chip plan" title="Prévu à ${String(set.mission_hour??8).padStart(2,'0')}h, pas encore exécuté">${esc(AG[a].split(' ')[0])} · prévu</span>`).join('')}</div>`}).join('');
  const ev=[...tk].sort((a,b)=>(b.finished_at||b.started_at||b.created_at).localeCompare(a.finished_at||a.started_at||a.created_at)).slice(0,14);
- const L={todo:'en attente',running:'en cours',waiting_approval:'attend votre validation',done:'terminé',failed:'échec'};
- const feed=`<div class="card"><b><span class="live"></span>Activité en temps réel</b>${ev.map(t=>`<div style="margin-top:8px"><span class="tag">${esc(AG[t.agent]||t.agent)}</span><span class="tag">${L[t.status]}</span> ${esc(t.title)} <span class="mut">${ph(t.finished_at||t.started_at||t.created_at)} · ${pd(t.finished_at||t.started_at||t.created_at).slice(5).split('-').reverse().join('/')}</span></div>`).join('')||'<div class="mut">Rien pour l\'instant.</div>'}</div>`;
- $('#v').innerHTML=auto+`<div class="card"><b>Calendrier</b> <span class="mut">(trait plein : fait, pointillé : prévu, orange : attend votre validation)</span><div class="cal" style="margin-top:10px">${head}${cells}</div><div id="det" class="mut" style="margin-top:10px"></div></div>`+feed;
- document.querySelectorAll('.chip[data-id]').forEach(c=>c.onclick=()=>{const t=tk.find(x=>x.id==c.dataset.id);$('#det').innerHTML=t?`<b>${esc(AG[t.agent])} : ${esc(t.title)}</b><pre>${esc((t.result||'').slice(0,900))}</pre>`:''});
- $('#svauto').onclick=async()=>{const md={};document.querySelectorAll('[data-a]').forEach(i=>{(md[i.dataset.a]??=[]);if(i.checked)md[i.dataset.a].push(+i.dataset.d)});await api('settings',{auto_missions:$('#am').checked,mission_hour:+$('#mh').value,review_enabled:$('#re').checked,review_day:+$('#rd').value,review_hour:+$('#rh').value,mission_days:md});await load()};
- $('#ms2').onclick=async()=>{$('#ms2').disabled=true;const r=await api('mission',{manual:true});alert(r.created&&r.created.length?r.created.length+' mission(s) lancée(s).':'Aucune mission prévue aujourd\'hui.');setTimeout(load,2000)}}
+ const L={todo:'en file',running:'en cours',waiting_approval:'attend votre validation',done:'terminé',failed:'échec'};
+ const feed=`<div class="card"><b><span class="live"></span>Activité en temps réel</b>${ev.map(t=>`<div style="margin-top:8px"><span class="tag">${esc(AG[t.agent]||t.agent)}</span><span class="tag">${esc(L[t.status])}</span> <button class="btn" style="padding:2px 8px;border:0;background:none;text-decoration:underline" data-open="${esc(t.id)}">${esc(t.title)}</button> <span class="mut">${esc(ph(t.finished_at||t.started_at||t.created_at))} · ${esc(dm(t.finished_at||t.started_at||t.created_at))}</span></div>`).join('')||'<div class="mut">Rien pour l\'instant.</div>'}</div>`;
+ $('#v').innerHTML=kpis+poles+auto+`<div class="card"><b>Calendrier</b> <span class="mut">pointillé : prévu, contour or : en file, plein : fait, orange : attend votre validation</span><div class="cal" style="margin-top:10px">${head}${cells}</div></div>`+feed;
+ bindDetail();
+ $('#svauto').onclick=e=>act(e.target,async()=>{const md={};document.querySelectorAll('[data-a]').forEach(i=>{(md[i.dataset.a]??=[]);if(i.checked)md[i.dataset.a].push(+i.dataset.d)});await api('settings',{auto_missions:$('#am').checked,mission_hour:+$('#mh').value,review_enabled:$('#re').checked,review_day:+$('#rd').value,review_hour:+$('#rh').value,mission_days:md});toast('Réglages enregistrés');await load()});
+ $('#ms2').onclick=e=>act(e.target,async()=>{const r=await api('mission',{manual:true});toast(r.created&&r.created.length?r.created.length+' mission(s) lancée(s)':"Aucune mission prévue aujourd'hui");setTimeout(load,2500)})}
 function vValider(pend){const v=$('#v');if(!pend.length){v.innerHTML='<div class="card">Rien à valider. Les agents travaillent.</div>';return}
- v.innerHTML=pend.map(a=>`<div class="card" data-id="${a.id}"><span class="tag">${KIND[a.kind]||a.kind}</span><span class="tag">${AG[a.agent]||a.agent}</span>${(a.flags||[]).map(f=>`<span class="tag flag">${esc(f)}</span>`).join('')}
- <h3 style="margin:8px 0">${esc(a.title)}</h3>${a.kind==='prompt_change'?`<pre>${esc(a.content)}</pre>`:`<textarea rows="${Math.min(14,Math.max(4,a.content.split('\n').length+2))}" class="ed">${esc(a.content)}</textarea>`}
+ v.innerHTML=pend.map(a=>`<div class="card" data-id="${esc(a.id)}"><span class="tag">${esc(KIND[a.kind]||a.kind)}</span><span class="tag">${esc(AG[a.agent]||a.agent)}</span><span class="tag">Risque ${esc(RISK[a.kind]||'Éditorial')}</span>${(a.flags||[]).map(f=>`<span class="tag flag">${esc(f)}</span>`).join('')}
+ <h3 style="margin:8px 0">${esc(a.title)}</h3>${a.kind==='prompt_change'?`<pre>${esc(a.content)}</pre>`:`<textarea rows="${Math.min(14,Math.max(4,a.content.split('\n').length+2))}" class="ed" aria-label="Contenu à valider">${esc(a.content)}</textarea>`}
  ${a.options?`<details><summary>Options / contexte</summary><pre>${esc(a.options)}</pre></details>`:''}${a.recommendation?`<p class="mut">Recommandation : ${esc(a.recommendation)}</p>`:''}
- <input class="cm" placeholder="Commentaire (obligatoire pour que l'agent refasse mieux)" style="margin-top:8px"><div class="row"><button class="btn ok" data-d="approve">${a.kind==='prompt_change'?'Appliquer':'Valider'}</button><button class="btn ko" data-d="reject">Refuser et refaire</button></div></div>`).join('');
- v.querySelectorAll('.card').forEach(c=>c.querySelectorAll('[data-d]').forEach(b=>b.onclick=async()=>{const d=b.dataset.d,cm=c.querySelector('.cm').value.trim();if(d==='reject'&&!cm&&!confirm('Refuser sans commentaire ? L\'agent ne refera pas la tâche.'))return;b.disabled=true;try{await api('decide',{id:+c.dataset.id,decision:d,edited_content:c.querySelector('.ed')?.value,comment:cm});load()}catch(e){alert(e.message);b.disabled=false}}))}
-function vDemander(){$('#v').innerHTML=`<div class="card"><p class="mut">Décrivez un besoin. Le chef d'orchestre le répartit entre les agents.</p><textarea id="q" rows="4" placeholder="Ex. Prépare 3 posts pour présenter le mug Haïti"></textarea><div class="row"><button class="btn ok" id="send">Envoyer</button></div></div>`;
- $('#send').onclick=async()=>{const t=$('#q').value.trim();if(!t)return;await api('enqueue',{title:t.slice(0,120),brief:t});tab='travail';setTimeout(load,1500)}}
-function vTravail(){const t=S.tasks.filter(x=>['todo','running','waiting_approval','failed'].includes(x.status));const L={todo:'En attente',running:'En cours',waiting_approval:'Attend votre validation',failed:'Échec'};
- $('#v').innerHTML=(t.length?t.map(x=>`<div class="card"><span class="tag">${AG[x.agent]}</span><span class="tag">${L[x.status]}</span> ${esc(x.title)}<div class="mut">demandé par ${esc(AG[x.created_by]||x.created_by)}${x.status==='failed'?' · '+esc(x.result):''}</div></div>`).join(''):'<div class="card">Aucune tâche ouverte.</div>')+
- (S.messages.length?`<details><summary>Échanges entre agents</summary>${S.messages.map(m=>`<div class="card mut"><b>${AG[m.from_agent]}</b> à <b>${AG[m.to_agent]}</b> : ${esc(m.content)}</div>`).join('')}</details>`:'')}
-function vLivrables(){const t=S.tasks.filter(x=>x.status==='done'&&x.result);$('#v').innerHTML=t.length?t.map(x=>`<div class="card" data-id="${x.id}"><span class="tag">${AG[x.agent]}</span> <b>${esc(x.title)}</b><pre>${esc(x.result)}</pre><div class="row"><button class="btn ${x.rating===1?'ok':''}" data-r="1">Bien</button><button class="btn ${x.rating===-1?'ko':''}" data-r="-1">À revoir</button></div></div>`).join(''):'<div class="card">Aucun livrable pour l\'instant.</div>';
- document.querySelectorAll('[data-r]').forEach(b=>b.onclick=async()=>{const id=+b.closest('.card').dataset.id,r=+b.dataset.r;const fb=r<0?prompt('Qu\'est-ce qui ne va pas ? (les agents s\'en serviront pour progresser)'):'';if(r<0&&fb===null)return;await api('rate',{id,rating:r,feedback:fb});load()})}
-function vAgents(){const by={};S.prompts.forEach(p=>(by[p.agent]??=[]).push(p));$('#v').innerHTML='<p class="mut">Les agents proposent chaque dimanche une amélioration d\'après vos validations et corrections. Rien ne change sans votre accord, et vous pouvez revenir à une version précédente.</p>'+Object.keys(AG).map(a=>{const vs=by[a]||[];const act=vs.find(p=>p.status==='active');return `<div class="card"><b>${AG[a]}</b> <span class="tag">version active : v${act?act.version:'?'}</span><details><summary>Versions (${vs.length})</summary>${vs.map(p=>`<div style="margin-top:10px"><span class="tag">v${p.version}</span><span class="tag">${p.status}</span><span class="mut">${esc(p.created_by)}</span>${p.rationale?`<div class="mut">${esc(p.rationale)}</div>`:''}<details><summary>Voir le prompt</summary><pre>${esc(p.prompt)}</pre></details>${p.status==='archived'?`<button class="btn" data-pv="${p.id}">Revenir à cette version</button>`:''}</div>`).join('')}</details></div>`}).join('')+`<div class="card"><label class="mut">Plafond de dépense par jour (dollars, estimation)</label><input id="bud" type="number" step="0.5" value="${S.settings.daily_budget_usd}"><div class="row"><button class="btn" id="sb">Enregistrer</button><button class="btn" id="rv">Lancer la relecture maintenant</button><button class="btn" id="ms">Lancer les missions du jour</button></div></div>`;
- document.querySelectorAll('[data-pv]').forEach(b=>b.onclick=async()=>{if(confirm('Revenir à cette version ?')){await api('prompt',{id:+b.dataset.pv});load()}});
- $('#sb').onclick=async()=>{await api('settings',{daily_budget_usd:+$('#bud').value});load()};$('#ms').onclick=async()=>{$('#ms').disabled=true;const r=await api('mission',{manual:true});alert(r.created&&r.created.length?r.created.length+' mission(s) lancée(s). Les projets arriveront dans « À valider ».':'Aucune mission prévue aujourd\'hui.');setTimeout(load,2000)};$('#rv').onclick=async()=>{$('#rv').disabled=true;const r=await api('review',{manual:true});alert(r.proposals.length?r.proposals.length+' amélioration(s) à valider dans « À valider »':'Rien à améliorer pour l\'instant (pas assez de retours).');load()}}
-function vHist(){const d=S.approvals.filter(a=>a.status!=='pending');const L={approved:'Validé',edited:'Corrigé',rejected:'Refusé'};$('#v').innerHTML=d.length?d.map(a=>`<div class="card"><span class="tag">${L[a.status]}</span><span class="tag">${AG[a.agent]}</span> ${esc(a.title)}${a.comment?`<div class="mut">${esc(a.comment)}</div>`:''}</div>`).join(''):'<div class="card">Pas encore d\'historique.</div>'}
-load();setInterval(()=>{if(S&&!document.activeElement.matches('textarea,input,select')&&!document.hidden)load()},tab==='hub'?10000:30000);
+ ${['prix_ou_promo','juridique','budget'].includes(a.kind)?'<p class="mut"><b>Validation renforcée :</b> prix, juridique et budget n\'engagent DINA qu\'après relecture attentive des deux associés.</p>':''}
+ <input type="text" class="cm" aria-label="Commentaire" placeholder="Commentaire (obligatoire pour que l'agent refasse mieux)" style="margin-top:8px"><div class="row"><button class="btn ok" data-d="approve">${a.kind==='prompt_change'?'Appliquer':'Valider'}</button><button class="btn ko" data-d="reject">Refuser et refaire</button></div></div>`).join('');
+ v.querySelectorAll('.card').forEach(c=>c.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>act(b,async()=>{const d=b.dataset.d,cm=c.querySelector('.cm').value.trim();if(d==='reject'&&!cm&&!confirm("Refuser sans commentaire ? L'agent ne refera pas la tâche."))return;await api('decide',{id:+c.dataset.id,decision:d,edited_content:c.querySelector('.ed')?.value,comment:cm});toast(d==='approve'?'Validé':'Refusé, retour à l\'agent');await load()})))}
+function vDemander(){const ags=Object.keys(AG).filter(a=>a!=='orchestrateur');
+ $('#v').innerHTML=`<div class="card"><h3>Nouvelle demande</h3><p class="mut">Décrivez l'objectif, le livrable attendu et les contraintes. Le chef d'orchestre répartit entre les agents, rien ne sort sans votre validation.</p>
+ <label for="q">Objectif et livrables attendus</label><textarea id="q" rows="5" placeholder="Ex. Prépare 3 posts pour présenter le mug Haïti, ton chaleureux, avec photos réelles"></textarea>
+ <div class="row"><label>Agent <select id="qa"><option value="orchestrateur">Automatique (chef d'orchestre)</option>${ags.map(a=>`<option value="${a}">${esc(AG[a])}</option>`).join('')}</select></label>
+ <label>Priorité <select id="qp"><option value="1">1, urgent</option><option value="3" selected>3, normale</option><option value="6">6, quand possible</option><option value="9">9, faible</option></select></label>
+ <label>Échéance <input type="date" id="qd"></label></div>
+ <div class="row"><button class="btn ok" id="send">Envoyer</button></div></div>`;
+ $('#send').onclick=e=>act(e.target,async()=>{const t=$('#q').value.trim();if(!t){toast('Décrivez la demande');return}await api('enqueue',{title:t.slice(0,120),brief:t,agent:$('#qa').value,priority:+$('#qp').value,deadline:$('#qd').value||null});toast('Demande envoyée');tab='travail';setTimeout(load,1500)})}
+function vTravail(){const t=S.tasks.filter(x=>['todo','running','waiting_approval','failed'].includes(x.status));const L={todo:'En file',running:'En cours',waiting_approval:'Attend votre validation',failed:'Échec'};
+ $('#v').innerHTML=`<div class="row" style="margin:0 0 10px"><button class="btn" id="cancel">Annuler les tâches en file</button></div>`+(t.length?t.map(x=>`<div class="card"><span class="tag">${esc(AG[x.agent]||x.agent)}</span><span class="tag">${esc(L[x.status])}</span> ${esc(x.title)}<div class="mut">demandé par ${esc(AG[x.created_by]||x.created_by)}${x.created_at?' · '+esc(dm(x.created_at)+' '+ph(x.created_at)):''}</div>${x.status==='failed'?`<div class="mut">Cause : ${esc(x.result)}</div><div class="row"><button class="btn" data-retry="${esc(x.id)}">Relancer</button></div>`:''}</div>`).join(''):'<div class="card">Aucune mission ouverte.</div>')+
+ (S.messages.length?`<details><summary>Échanges entre agents</summary>${S.messages.map(m=>`<div class="card mut"><b>${esc(AG[m.from_agent]||m.from_agent)}</b> à <b>${esc(AG[m.to_agent]||m.to_agent)}</b> : ${esc(m.content)}</div>`).join('')}</details>`:'');
+ $('#cancel').onclick=e=>act(e.target,async()=>{if(!confirm('Annuler toutes les tâches en file (celles en cours finissent leur étape) ?'))return;const r=await api('cancel',{});toast(r.cancelled+' tâche(s) annulée(s)');await load()});
+ document.querySelectorAll('[data-retry]').forEach(b=>b.onclick=()=>act(b,async()=>{await api('retry',{id:+b.dataset.retry});toast('Relancée');setTimeout(load,2000)}))}
+function vLivrables(){const t=S.tasks.filter(x=>x.status==='done'&&x.result);
+ $('#v').innerHTML=t.length?t.map(x=>`<div class="card" data-id="${esc(x.id)}"><span class="tag">${esc(AG[x.agent]||x.agent)}</span> <b>${esc(x.title)}</b><pre>${esc(String(x.result).slice(0,500))}${x.result.length>500?'…':''}</pre><div class="row"><button class="btn" data-open="${esc(x.id)}">Voir en entier</button><button class="btn ${x.rating===1?'ok':''}" data-r="1">Bien</button><button class="btn ${x.rating===-1?'ko':''}" data-r="-1">À revoir</button></div></div>`).join(''):'<div class="card">Aucun livrable pour l\'instant.</div>';
+ bindDetail();document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>act(b,async()=>{const id=+b.closest('.card').dataset.id,r=+b.dataset.r;const fb=r<0?prompt("Qu'est-ce qui ne va pas ? (les agents s'en serviront pour progresser)"):'';if(r<0&&fb===null)return;await api('rate',{id,rating:r,feedback:fb});await load()}))}
+function vAgents(){const by={};S.prompts.forEach(p=>(by[p.agent]??=[]).push(p));const st=stats(),owner=S.me.role==='owner';
+ const perf=`<div class="card"><b>Performance (7 jours)</b><div style="overflow:auto"><table><tr><th>Agent</th><th>Terminées</th><th>Échecs</th><th>Acceptés</th><th>Coût</th><th>Coût moyen</th></tr>${Object.keys(AG).map(a=>{const b=st.by[a],n=b.done+b.fail;return `<tr><td>${esc(AG[a])}</td><td>${b.done}</td><td>${b.fail}</td><td>${b.dec?Math.round(b.ok/b.dec*100)+' %':'n/a'}</td><td>${b.cost.toFixed(2)} $</td><td>${n?(b.cost/n).toFixed(3)+' $':'n/a'}</td></tr>`}).join('')}</table></div><p class="mut">Un prompt plus long ou recommandé par un agent n'est pas meilleur en soi : jugez sur le taux d'acceptation et le coût.</p></div>`;
+ $('#v').innerHTML=perf+'<p class="mut">Les agents proposent chaque semaine une amélioration d\'après vos validations. Rien ne change sans votre accord, retour arrière possible.</p>'+Object.keys(AG).map(a=>{const vs=by[a]||[];const act=vs.find(p=>p.status==='active');return `<div class="card"><b>${esc(AG[a])}</b> <span class="tag">version active : v${esc(act?act.version:'?')}</span><details><summary>Versions (${vs.length})</summary>${vs.map(p=>`<div style="margin-top:10px"><span class="tag">v${esc(p.version)}</span><span class="tag">${esc(p.status)}</span><span class="mut">${esc(p.created_by)}</span>${p.rationale?`<div class="mut">${esc(p.rationale)}</div>`:''}<details><summary>Voir le prompt</summary><pre>${esc(p.prompt)}</pre></details>${p.status==='archived'?`<button class="btn" data-pv="${esc(p.id)}">Revenir à cette version</button>`:''}</div>`).join('')}</details></div>`}).join('')+
+ `<div class="card"><label for="bud">Plafond de dépense par jour (dollars, estimation, appliqué par le serveur)</label><input type="number" id="bud" step="0.5" min="0" value="${esc(S.settings.daily_budget_usd)}"><div class="row"><button class="btn" id="sb">Enregistrer</button><button class="btn" id="rv">Lancer la relecture maintenant</button></div></div>`;
+ document.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>act(b,async()=>{if(confirm('Revenir à cette version ?')){await api('prompt',{id:+b.dataset.pv});await load()}}));
+ $('#sb').onclick=e=>act(e.target,async()=>{await api('settings',{daily_budget_usd:+$('#bud').value});toast('Plafond enregistré');await load()});
+ $('#rv').onclick=e=>act(e.target,async()=>{const r=await api('review',{manual:true});toast(r.proposals.length?r.proposals.length+' amélioration(s) à valider':"Rien à améliorer pour l'instant");await load()})}
+function vHist(){const d=S.approvals.filter(a=>a.status!=='pending');const L={approved:'Validé',edited:'Corrigé',rejected:'Refusé'};
+ $('#v').innerHTML=d.length?d.map(a=>`<div class="card"><span class="tag">${esc(L[a.status])}</span><span class="tag">${esc(AG[a.agent]||a.agent)}</span><span class="tag">${esc(KIND[a.kind]||a.kind)}</span>${a.decided_by?`<span class="tag">par ${esc(a.decided_by)}</span>`:''} ${esc(a.title)}${a.comment?`<div class="mut">${esc(a.comment)}</div>`:''}${a.status==='edited'&&a.edited_content?`<details><summary>Comparer la version de l'agent et la version finale</summary><div class="diff"><div><b>Agent</b><pre>${esc(a.content)}</pre></div><div><b>Version finale</b><pre>${esc(a.edited_content)}</pre></div></div></details>`:''}</div>`).join(''):'<div class="card">Pas encore d\'historique.</div>'}
+function vJournal(){const a=S.audit||[];$('#v').innerHTML=`<div class="card"><b>Journal des actions</b><p class="mut">Qui a fait quoi sur le Hub.</p><div style="overflow:auto"><table><tr><th>Quand</th><th>Qui</th><th>Action</th><th>Détail</th></tr>${a.map(x=>`<tr><td>${esc(dm(x.at)+' '+ph(x.at))}</td><td>${esc(x.actor)}</td><td>${esc(x.action)}</td><td>${esc(x.detail)}</td></tr>`).join('')||'<tr><td colspan="4">Rien pour l\'instant.</td></tr>'}</table></div></div>`}
+async function vAcces(){
+ $('#v').innerHTML='<div class="card">Chargement…</div>';
+ try{USERS=(await api('users')).users}catch(e){$('#v').innerHTML=`<div class="card" role="alert">${esc(e.message)}</div>`;return}
+ $('#v').innerHTML=`${newKey?`<div class="card"><b>Nouvelle clé</b><p class="mut">Copiez-la maintenant et remettez-la à la personne. Elle ne sera plus jamais affichée.</p><div class="keybox" id="kb">${esc(newKey)}</div><div class="row"><button class="btn" id="kc">Copier</button><button class="btn" id="kh">J'ai copié, masquer</button></div></div>`:''}
+ <div class="card"><b>Accès au Hub</b><p class="mut">Chaque personne a sa propre clé, ses actions sont tracées dans le Journal. Le propriétaire gère les accès ; les associés valident et demandent.</p><div style="overflow:auto"><table><tr><th>Nom</th><th>Rôle</th><th>Dernière visite</th><th>État</th><th></th></tr>${USERS.map(u=>`<tr><td>${esc(u.name)}</td><td>${u.role==='owner'?'Propriétaire':'Associé'}</td><td>${u.last_seen?esc(dm(u.last_seen)+' '+ph(u.last_seen)):'jamais'}</td><td>${u.active?'Actif':'Révoqué'}</td><td><button class="btn" data-rot="${esc(u.id)}">Nouvelle clé</button> <button class="btn ${u.active?'ko':''}" data-rev="${esc(u.id)}" data-act="${u.active?0:1}">${u.active?'Révoquer':'Rétablir'}</button></td></tr>`).join('')||'<tr><td colspan="5">Aucun accès personnel pour l\'instant.</td></tr>'}</table></div></div>
+ <div class="card"><b>Ajouter une personne</b><div class="row"><label>Nom <input type="text" id="un" maxlength="40"></label><label>Rôle <select id="ur"><option value="associe">Associé</option><option value="owner">Propriétaire</option></select></label><button class="btn ok" id="uc">Créer l'accès</button></div></div>`;
+ if(newKey){$('#kc').onclick=()=>navigator.clipboard?.writeText(newKey).then(()=>toast('Clé copiée'));$('#kh').onclick=()=>{newKey=null;vAcces()}}
+ $('#uc').onclick=e=>act(e.target,async()=>{const n=$('#un').value.trim();if(!n){toast('Nom requis');return}const r=await api('user_create',{name:n,role:$('#ur').value});newKey=r.key;await vAcces()});
+ document.querySelectorAll('[data-rot]').forEach(b=>b.onclick=()=>act(b,async()=>{if(!confirm("L'ancienne clé cessera de fonctionner. Continuer ?"))return;const r=await api('user_rotate',{id:+b.dataset.rot});newKey=r.key;await vAcces()}));
+ document.querySelectorAll('[data-rev]').forEach(b=>b.onclick=()=>act(b,async()=>{await api('user_revoke',{id:+b.dataset.rev,active:b.dataset.act==='1'});await vAcces()}))}
+function poll(){setTimeout(async()=>{if(KEY&&!document.hidden&&!busy&&!editing()&&tab!=='acces')await load();poll()},tab==='hub'?10000:30000)}
+if(KEY)load();else login();poll();
 </script></body></html>
