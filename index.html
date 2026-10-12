@@ -38,10 +38,18 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:6px 8px;b
 dialog{max-width:760px;width:94vw;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);padding:16px}dialog::backdrop{background:#0008}
 #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--br);color:var(--bg);padding:10px 16px;border-radius:10px;max-width:92vw;display:none;z-index:9}
 .keybox{background:var(--bg);border:1px dashed var(--or);border-radius:8px;padding:10px;word-break:break-all;font-family:monospace}
+
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:8px;overflow-x:auto;padding-bottom:8px;align-items:start}.col{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px;min-height:80px}.col>b{display:block;font-size:13px;margin-bottom:6px;color:var(--br)}
+.lc{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px;font-size:13px}.lc.late{border-color:var(--ko)}.lc .t{display:block;width:100%;text-align:left;background:none;border:0;font:600 14px inherit;color:var(--ink);cursor:pointer;padding:0 0 4px}
+.lc select{width:100%;margin-top:6px;font-size:12px}.late-t{color:var(--ko);font-weight:600}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.fg .w{grid-column:1/-1}.fg select{width:100%}
+.tl{font-size:12px;color:var(--mut);max-height:120px;overflow:auto;margin-top:8px}
+@media(max-width:640px){.fg{grid-template-columns:1fr}}
 @media(max-width:640px){main{padding:12px}.cal{grid-template-columns:repeat(2,1fr)}.cal .h{display:none}.sg{grid-template-columns:80px repeat(7,1fr)}.diff{grid-template-columns:1fr}table{font-size:12px}}
 </style></head><body>
 <header><h1>DINA · Hub</h1><span class="mut" id="me"></span><span class="sp"></span><span class="mut" id="sync" role="status"></span><span class="mut" id="cost"></span><button class="btn" id="stop" hidden></button><button class="btn" id="out" hidden>Déconnexion</button></header>
 <main id="app"></main><div id="toast" role="status" aria-live="polite"></div>
+<dialog id="ed"><div id="edb"></div><div class="row"><button class="btn ok" id="eds">Enregistrer</button><button class="btn ko" id="edd">Supprimer</button><button class="btn" id="edx">Fermer</button></div></dialog>
 <dialog id="dlg"><div id="dlgb"></div><div class="row"><button class="btn" id="dlgc">Copier</button><button class="btn" id="dlgx">Fermer</button></div></dialog>
 <script>
 const DEFAULT_URL='https://osfxqudjkforfzfsdrub.supabase.co/functions/v1/agents';
@@ -54,7 +62,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const store=()=>localStorage.getItem('dina_key')?localStorage:sessionStorage;
 const get=k=>{try{return localStorage.getItem(k)||sessionStorage.getItem(k)||''}catch(e){return ''}};
-let URLB=get('dina_url')||DEFAULT_URL,KEY=get('dina_key'),S=null,tab='hub',busy=false,loading=false,lastOk=0,online=true,newKey=null,USERS=null;
+let URLB=get('dina_url')||DEFAULT_URL,KEY=get('dina_key'),S=null,tab='hub',busy=false,loading=false,lastOk=0,online=true,newKey=null,USERS=null,W=null,WERR='',pq='',pown='',esub='taches',emine=false;
 const pd=d=>!d?'':new Date(d).toLocaleDateString('sv-SE',{timeZone:'Europe/Paris'});
 const ph=d=>!d?'':new Date(d).toLocaleTimeString('fr-FR',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit'});
 const dm=d=>pd(d).slice(5).split('-').reverse().join('/');
@@ -65,7 +73,7 @@ async function api(r,body){
   const j=await res.json().catch(()=>({error:'Réponse illisible'}));if(!res.ok){const e=new Error(j.error||('Erreur '+res.status));e.status=res.status;throw e}return j}
  catch(e){if(e.name==='AbortError')throw new Error('Délai dépassé, réessayez');if(e instanceof TypeError)throw new Error('Connexion impossible au serveur');throw e}finally{clearTimeout(to)}}
 async function act(btn,fn){if(busy)return;busy=true;if(btn)btn.disabled=true;try{await fn()}catch(e){toast(e.message)}finally{busy=false;if(btn)btn.disabled=false}}
-const editing=()=>document.activeElement&&document.activeElement.matches('textarea,input,select')||$('#dlg').open;
+const editing=()=>document.activeElement&&document.activeElement.matches('textarea,input,select')||$('#dlg').open||$('#ed').open;
 function login(msg){
  $('#stop').hidden=$('#out').hidden=true;$('#me').textContent='';
  $('#app').innerHTML=`<div class="card" style="max-width:520px;margin:0 auto"><h2>Connexion</h2>${msg?`<p role="alert" style="color:var(--ko)">${esc(msg)}</p>`:''}<p class="mut">Votre clé personnelle vous est remise par le propriétaire. Elle n'est jamais envoyée ailleurs que vers votre serveur DINA.</p>
@@ -80,7 +88,7 @@ function login(msg){
 function logout(){try{localStorage.removeItem('dina_key');sessionStorage.removeItem('dina_key')}catch(e){}KEY='';S=null;login()}
 async function load(first){
  if(loading)return;loading=true;
- try{S=await api('state');lastOk=Date.now();online=true;render()}
+ try{S=await api('state');try{W=await api('ws');WERR=''}catch(e2){if(e2.status===401)throw e2;WERR=e2.message}lastOk=Date.now();online=true;render()}
  catch(e){online=false;if(e.status===401||!KEY){logout();if(e.status===401)login('Clé refusée');return}
   if(!S)$('#app').innerHTML=`<div class="card" role="alert">${esc(e.message)}<div class="row"><button class="btn" id="rt">Réessayer</button><button class="btn" id="lo">Reconnexion</button></div></div>`,$('#rt').onclick=()=>load(),$('#lo').onclick=logout;
   else{toast(e.message);head()}}
@@ -95,12 +103,12 @@ function head(){
  st.onclick=()=>act(st,async()=>{if(!set.kill_switch&&!confirm("Arrêt d'urgence : plus aucune nouvelle mission, et les tâches en cours s'arrêtent à la prochaine étape. Continuer ?"))return;await api('settings',{kill_switch:!set.kill_switch});toast(set.kill_switch?'Agents relancés':'Agents arrêtés');await load()})}
 function render(){
  head();const pend=S.approvals.filter(a=>a.status==='pending');
- const tabs=[['hub','Hub'],['valider',`À valider (${pend.length})`],['demander','Demander'],['travail','Missions'],['livrables','Livrables'],['agents','Agents'],['historique','Historique'],['journal','Journal']];
+ const tabs=[['hub','Hub'],['valider',`À valider (${pend.length})`],['demander','Demander'],['pipeline','Prospects'],['espace','Espace'],['travail','Missions'],['livrables','Livrables'],['agents','Agents'],['historique','Historique'],['journal','Journal']];
  if(S.me.role==='owner')tabs.push(['acces','Accès']);
  const keep=editing()&&tab!=='hub'?null:1;
  $('#app').innerHTML=`<nav aria-label="Sections">${tabs.map(([k,l])=>`<button aria-pressed="${tab===k}" data-t="${k}">${esc(l)}</button>`).join('')}</nav><div id="v"></div>`;
  document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;render()});
- ({hub:vHub,valider:vValider,demander:vDemander,travail:vTravail,livrables:vLivrables,agents:vAgents,historique:vHist,journal:vJournal,acces:vAcces})[tab](pend)}
+ ({hub:vHub,pipeline:vPipe,espace:vEspace,valider:vValider,demander:vDemander,travail:vTravail,livrables:vLivrables,agents:vAgents,historique:vHist,journal:vJournal,acces:vAcces})[tab](pend)}
 function openDetail(t,body){$('#dlgb').innerHTML=`<h3>${esc(t)}</h3><pre>${esc(body||'(vide)')}</pre>`;$('#dlgc').onclick=()=>navigator.clipboard?.writeText(body||'').then(()=>toast('Copié'));$('#dlgx').onclick=()=>$('#dlg').close();$('#dlg').showModal()}
 const task=id=>S.tasks.find(x=>x.id==id);
 function bindDetail(root){(root||document).querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{const t=task(b.dataset.open);if(t)openDetail(`${AG[t.agent]||t.agent} : ${t.title}`,t.result)})}
@@ -115,6 +123,18 @@ function stats(){
  (S.runs||[]).forEach(r=>{const b=by[r.agent];if(b)b.cost+=Number(r.cost_usd)});
  dec.forEach(a=>{const b=by[a.agent];if(b){b.dec++;if(a.status!=='rejected')b.ok++}});
  return{running:tk.filter(t=>t.status==='running').length,waiting:S.approvals.filter(a=>a.status==='pending').length,failed:rec.filter(t=>t.status==='failed').length,done:rec.filter(t=>t.status==='done'||t.status==='waiting_approval').length,acc,by}}
+
+function vObj(){
+ if(!W)return `<div class="card"><b>Pipeline et objectifs</b><p class="mut">${esc(WERR||'Indisponible')}</p></div>`;
+ const today=pd(S.server_now),mo=today.slice(0,7),wk=pd(new Date(new Date(S.server_now).getTime()-7*864e5));
+ const open=W.leads.filter(l=>!['gagne','perdu'].includes(l.status)),late=open.filter(l=>l.next_relance&&l.next_relance<=today);
+ const won=W.leads.filter(l=>l.status==='gagne'&&pd(l.updated_at).slice(0,7)===mo),ca=won.reduce((s,l)=>s+Number(l.valeur||0),0);
+ const ct=W.leads.filter(l=>l.last_interaction&&pd(l.last_interaction)>=wk).length;
+ const mine=W.tasks.filter(t=>t.assignee===S.me.name&&t.status!=='done').length;
+ const O=W.objectives||{},bar=(v,o)=>o>0?`<div class="bar ${v>=o?'':'w'}" style="--x:1"><i style="width:${Math.min(100,v/o*100)}%;${v>=o?'':'background:var(--or)'}"></i></div>`:'';
+ const kp=(v,l,al,b)=>`<div class="kpi ${al?'al':''}"><b>${esc(v)}</b><span>${esc(l)}</span>${b||''}</div>`;
+ return `<div class="card"><b>Pipeline et objectifs</b><div class="kpis" style="margin-top:8px">${kp(open.length,'prospects actifs')}${kp(late.length,'relances à faire',late.length>0)}${kp(won.length+(O.gagnes_mois?' / '+O.gagnes_mois:''),'gagnés ce mois',false,bar(won.length,O.gagnes_mois))}${kp(num(ca)||'0','valeur gagnée ce mois'+(O.ca_mois?' (objectif '+num(O.ca_mois)+')':''),false,bar(ca,O.ca_mois))}${kp(ct+(O.contacts_semaine?' / '+O.contacts_semaine:''),'contacts sur 7 jours',false,bar(ct,O.contacts_semaine))}${kp(mine,'mes tâches ouvertes')}</div>
+ <details><summary>Définir les objectifs</summary><div class="row"><label>Valeur gagnée par mois <input type="number" id="o1" min="0" value="${esc(O.ca_mois||0)}"></label><label>Prospects gagnés par mois <input type="number" id="o2" min="0" value="${esc(O.gagnes_mois||0)}"></label><label>Contacts par semaine <input type="number" id="o3" min="0" value="${esc(O.contacts_semaine||0)}"></label><button class="btn" id="osv">Enregistrer</button></div></details></div>`}
 function vHub(){
  const set=S.settings,sch=S.schedule,today=pd(S.server_now),tk=S.tasks,st=stats();
  const t0=new Date(today+'T12:00:00Z');const dow=(t0.getUTCDay()+6)%7;const start=new Date(t0.getTime()-dow*864e5);
@@ -123,8 +143,7 @@ function vHub(){
  const kp=(v,l,al)=>`<div class="kpi ${al?'al':''}"><b>${esc(v)}</b><span>${esc(l)}</span></div>`;
  const kpis=`<div class="kpis">${kp(st.running,'missions en cours')}${kp(st.waiting,'à valider par vous',st.waiting>=10)}${kp(st.failed,'échecs sur 7 jours',st.failed>0)}${kp(st.done,'terminées sur 7 jours')}${kp(st.acc===null?'n/a':st.acc+' %','taux d\'acceptation')}
  <div class="kpi"><b>${S.spent_today.toFixed(2)} $</b><span>coût aujourd'hui (${S.spent_week.toFixed(2)} $ sur 7 j)</span><div class="bar ${pct>=80?'w':''}"><i style="width:${pct}%"></i></div></div>
- ${kp(S.real.orders,'commandes réelles (site)')}${kp(S.real.client_messages,'messages clients reçus')}</div>
- <p class="mut">Les indicateurs commerciaux (prospects, devis, marge) apparaîtront quand les données réelles existeront. Rien n'est simulé ici.</p>`;
+ ${kp(S.real.orders,'commandes réelles (site)')}${kp(S.real.client_messages,'messages clients reçus')}</div>`;
  const poles=`<div class="card"><b>Pôles</b><table><tr><th>Pôle</th><th>Agents</th><th>Missions 7 j</th><th>Coût 7 j</th></tr>${Object.entries(POLES).map(([p,ags])=>`<tr><td>${esc(p)}</td><td>${ags.map(a=>esc(AG[a].split(' ')[0])).join(', ')}</td><td>${ags.reduce((s,a)=>s+st.by[a].done+st.by[a].fail,0)}</td><td>${ags.reduce((s,a)=>s+st.by[a].cost,0).toFixed(2)} $</td></tr>`).join('')}</table></div>`;
  const info=set.kill_switch?'Les agents sont arrêtés.':set.auto_missions===false?'Missions automatiques en pause : les agents ne travaillent que sur demande.':nr?`Prochaines missions : ${DL[new Date(nr.key+'T12:00:00Z').getUTCDay()].toLowerCase()} ${nr.key.split('-').reverse().slice(0,2).join('/')} à ${String(nr.hh).padStart(2,'0')}h (${nr.ag.map(a=>esc(AG[a])).join(', ')}).`:'Aucune mission prévue.';
  const hrs=(id,v)=>`<select id="${id}">${[...Array(24)].map((_,i)=>`<option value="${i}" ${i===v?'selected':''}>${String(i).padStart(2,'0')}h</option>`).join('')}</select>`;
@@ -144,10 +163,73 @@ function vHub(){
  const ev=[...tk].sort((a,b)=>(b.finished_at||b.started_at||b.created_at).localeCompare(a.finished_at||a.started_at||a.created_at)).slice(0,14);
  const L={todo:'en file',running:'en cours',waiting_approval:'attend votre validation',done:'terminé',failed:'échec'};
  const feed=`<div class="card"><b><span class="live"></span>Activité en temps réel</b>${ev.map(t=>`<div style="margin-top:8px"><span class="tag">${esc(AG[t.agent]||t.agent)}</span><span class="tag">${esc(L[t.status])}</span> <button class="btn" style="padding:2px 8px;border:0;background:none;text-decoration:underline" data-open="${esc(t.id)}">${esc(t.title)}</button> <span class="mut">${esc(ph(t.finished_at||t.started_at||t.created_at))} · ${esc(dm(t.finished_at||t.started_at||t.created_at))}</span></div>`).join('')||'<div class="mut">Rien pour l\'instant.</div>'}</div>`;
- $('#v').innerHTML=kpis+poles+auto+`<div class="card"><b>Calendrier</b> <span class="mut">pointillé : prévu, contour or : en file, plein : fait, orange : attend votre validation</span><div class="cal" style="margin-top:10px">${head}${cells}</div></div>`+feed;
+ $('#v').innerHTML=kpis+vObj()+poles+auto+`<div class="card"><b>Calendrier</b> <span class="mut">pointillé : prévu, contour or : en file, plein : fait, orange : attend votre validation</span><div class="cal" style="margin-top:10px">${head}${cells}</div></div>`+feed;
  bindDetail();
+ if($('#osv'))$('#osv').onclick=e=>act(e.target,async()=>{const r=await api('objectives',{values:{ca_mois:+$('#o1').value,gagnes_mois:+$('#o2').value,contacts_semaine:+$('#o3').value}});W.objectives=r.objectives;toast('Objectifs enregistrés');render()});
  $('#svauto').onclick=e=>act(e.target,async()=>{const md={};document.querySelectorAll('[data-a]').forEach(i=>{(md[i.dataset.a]??=[]);if(i.checked)md[i.dataset.a].push(+i.dataset.d)});await api('settings',{auto_missions:$('#am').checked,mission_hour:+$('#mh').value,review_enabled:$('#re').checked,review_day:+$('#rd').value,review_hour:+$('#rh').value,mission_days:md});toast('Réglages enregistrés');await load()});
  $('#ms2').onclick=e=>act(e.target,async()=>{const r=await api('mission',{manual:true});toast(r.created&&r.created.length?r.created.length+' mission(s) lancée(s)':"Aucune mission prévue aujourd'hui");setTimeout(load,2500)})}
+
+const LS=[['identifier','Identifié'],['contacte','Contacté'],['relance','À relancer'],['echange','Échange en cours'],['devis','Devis envoyé'],['gagne','Gagné'],['perdu','Perdu']];
+const LT=[['boutique','Boutique'],['entreprise','Entreprise'],['evenement','Événement'],['association','Association'],['collectivite','Collectivité'],['autre','Autre']];
+const TM=[['froid','Froid'],['tiede','Tiède'],['chaud','Chaud']],TE={froid:'❄',tiede:'☁',chaud:'🔥'};
+const TS=[['todo','À faire'],['doing','En cours'],['review','À valider'],['done','Terminé']],TP=[['low','Basse'],['normal','Normale'],['high','Haute'],['urgent','Urgente']];
+const lab=(arr,v)=>(arr.find(x=>x[0]===v)||[v,v])[1];
+const opt=(arr,v)=>arr.map(([a,b])=>`<option value="${esc(a)}" ${a===v?'selected':''}>${esc(b)}</option>`).join('');
+const num=v=>v===null||v===undefined||v===''?'':Number(v).toLocaleString('fr-FR');
+const WK={dina_leads:'leads',dina_tasks:'tasks',dina_notes:'notes'};
+function wsLocal(table,item){const a=W[WK[table]];const i=a.findIndex(x=>x.id===item.id);if(i>=0)a[i]=item;else a.unshift(item);render()}
+async function wsSave(table,id,fields){const r=await api('ws_save',{table,id,fields});wsLocal(table,r.item);return r.item}
+async function wsDel(table,id){await api('ws_delete',{table,id});W[WK[table]]=W[WK[table]].filter(x=>x.id!==id);render()}
+const wsMissing=()=>`<div class="card" role="alert"><b>Espace de travail indisponible</b><p class="mut">${esc(WERR||'Chargement impossible')}</p><p class="mut">Si c'est la première fois, la création des tables (SQL fourni) n'a pas encore été faite.</p></div>`;
+function ff(f,v){const id='f_'+f.k,val=v??'';const L=`<label for="${id}">${esc(f.l)}</label>`;
+ if(f.t==='area')return L+`<textarea id="${id}" rows="${f.r||4}">${esc(val)}</textarea>`;
+ if(f.t==='sel')return L+`<select id="${id}">${opt(f.o,val)}</select>`;
+ return L+`<input id="${id}" type="${f.t==='num'?'number':f.t==='date'?'date':'text'}" value="${esc(val)}" ${f.t==='num'?'min="0" step="any"':''}>`}
+function editor(title,fields,vals,o){const d=$('#ed');
+ $('#edb').innerHTML=`<h3>${esc(title)}</h3><div class="fg">${fields.map(f=>`<div class="${f.w?'w':''}">${ff(f,vals[f.k])}</div>`).join('')}</div>${o.extra||''}`;
+ $('#eds').onclick=e=>act(e.target,async()=>{const r={};fields.forEach(f=>{let v=$('#f_'+f.k).value;if(f.t==='num')v=v===''?null:+v;if(f.t==='date'&&!v)v=null;r[f.k]=v});await o.onSave(r);d.close()});
+ $('#edd').hidden=!o.onDelete;$('#edd').onclick=e=>act(e.target,async()=>{if(!confirm('Supprimer définitivement ?'))return;await o.onDelete();d.close()});
+ $('#edx').onclick=()=>d.close();if(o.bind)o.bind();d.showModal()}
+const team=()=>(W.team||[]).map(n=>[n,n]);
+function leadForm(l){const isNew=!l;l=l||{status:'identifier',type:'entreprise',temperature:'tiede',owner:S.me.name};
+ editor(isNew?'Nouveau prospect':l.nom,[{k:'nom',l:'Nom',w:1},{k:'type',l:'Type',t:'sel',o:LT},{k:'status',l:'Étape',t:'sel',o:LS},{k:'contact',l:'Contact'},{k:'email',l:'Email'},{k:'phone',l:'Téléphone'},{k:'valeur',l:'Valeur estimée (à renseigner, pas de prix inventé)',t:'num'},{k:'temperature',l:'Intérêt',t:'sel',o:TM},{k:'owner',l:'Responsable',t:'sel',o:[['','Personne'],...team()]},{k:'next_relance',l:'Prochaine relance',t:'date'},{k:'notes',l:'Notes',t:'area',w:1,r:5}],l,{
+  onSave:async r=>{if(!r.nom||!String(r.nom).trim()){throw new Error('Nom requis')}await wsSave('dina_leads',isNew?null:l.id,r);toast('Enregistré')},
+  onDelete:isNew?null:async()=>{await wsDel('dina_leads',l.id);toast('Supprimé')},
+  extra:isNew?'':`<div class="row"><input type="text" id="ltx" placeholder="Note du contact (ex. appelé, message envoyé)" style="flex:1"><button class="btn" id="lt">Contact fait, relance dans 3 jours</button></div><div class="tl">${(l.timeline||[]).map(t=>`<div>${esc(dm(t.date))} ${esc(ph(t.date))} : ${esc(t.texte)}</div>`).join('')}</div>${l.agent?`<p class="mut">Proposé par l'agent ${esc(AG[l.agent]||l.agent)}</p>`:''}`,
+  bind:()=>{if(!isNew)$('#lt').onclick=e=>act(e.target,async()=>{const r=await api('lead_touch',{id:l.id,texte:$('#ltx').value.trim()||undefined});wsLocal('dina_leads',r.item);$('#ed').close();toast('Contact enregistré')})}})}
+function vPipe(){
+ if(!W){$('#v').innerHTML=wsMissing();return}
+ const today=pd(S.server_now);
+ $('#v').innerHTML=`<div class="card"><div class="row" style="margin-top:0"><input type="text" id="pq" placeholder="Rechercher un prospect" value="${esc(pq)}" style="flex:1;min-width:160px"><select id="po"><option value="">Tous les responsables</option>${(W.team||[]).map(n=>`<option ${n===pown?'selected':''}>${esc(n)}</option>`).join('')}</select><button class="btn ok" id="pn">Nouveau prospect</button></div><p class="mut" id="ps"></p></div><div id="board"></div>`;
+ const draw=()=>{const q=pq.toLowerCase();const L=W.leads.filter(l=>(!pown||l.owner===pown)&&(!q||(l.nom+' '+(l.contact||'')+' '+(l.notes||'')).toLowerCase().includes(q)));
+  const open=L.filter(l=>!['gagne','perdu'].includes(l.status)),late=open.filter(l=>l.next_relance&&l.next_relance<=today);
+  $('#ps').textContent=`${open.length} prospect(s) actif(s), ${late.length} relance(s) à faire${open.some(l=>l.valeur)?', valeur estimée en cours : '+num(open.reduce((s,l)=>s+Number(l.valeur||0),0)):''}`;
+  $('#board').innerHTML=`<div class="board">${LS.map(([k,lb])=>{const c=L.filter(l=>l.status===k);return `<div class="col"><b>${esc(lb)} (${c.length})</b>${c.map(l=>{const lt=l.next_relance&&l.next_relance<=today&&!['gagne','perdu'].includes(l.status);return `<div class="lc ${lt?'late':''}"><button class="t" data-e="${esc(l.id)}">${esc(l.nom)}</button><span class="tag">${esc(lab(LT,l.type))}</span><span class="tag">${TE[l.temperature]||''} ${esc(lab(TM,l.temperature))}</span>${l.source==='agent'?`<span class="tag">agent</span>`:''}${l.valeur?`<div>${esc(num(l.valeur))}</div>`:''}${l.owner?`<div class="mut">${esc(l.owner)}</div>`:''}${l.next_relance?`<div class="${lt?'late-t':'mut'}">Relance ${esc(dm(l.next_relance))}</div>`:''}<select data-mv="${esc(l.id)}" aria-label="Changer d'étape">${opt(LS,l.status)}</select></div>`}).join('')||'<div class="mut">Vide</div>'}</div>`}).join('')}</div>`;
+  document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>leadForm(W.leads.find(x=>x.id===b.dataset.e)));
+  document.querySelectorAll('[data-mv]').forEach(sel=>sel.onchange=()=>act(sel,async()=>{await wsSave('dina_leads',sel.dataset.mv,{status:sel.value})}))};
+ draw();$('#pq').oninput=e=>{pq=e.target.value;draw()};$('#po').onchange=e=>{pown=e.target.value;draw()};$('#pn').onclick=()=>leadForm(null)}
+function taskForm(t){const isNew=!t;t=t||{status:'todo',priority:'normal',assignee:S.me.name};
+ editor(isNew?'Nouvelle tâche':t.title,[{k:'title',l:'Titre',w:1},{k:'status',l:'État',t:'sel',o:TS},{k:'priority',l:'Priorité',t:'sel',o:TP},{k:'assignee',l:'Pour',t:'sel',o:team()},{k:'due_date',l:'Échéance',t:'date'},{k:'description',l:'Détail',t:'area',w:1,r:5}],t,{
+  onSave:async r=>{if(!r.title||!String(r.title).trim())throw new Error('Titre requis');await wsSave('dina_tasks',isNew?null:t.id,r);toast('Enregistré')},
+  onDelete:isNew?null:async()=>{await wsDel('dina_tasks',t.id);toast('Supprimée')}})}
+function noteForm(n){const isNew=!n;n=n||{};
+ editor(isNew?'Nouvelle note':n.title,[{k:'title',l:'Titre',w:1},{k:'content',l:'Contenu',t:'area',w:1,r:14}],n,{
+  onSave:async r=>{await wsSave('dina_notes',isNew?null:n.id,r);toast('Enregistré')},
+  onDelete:isNew?null:async()=>{await wsDel('dina_notes',n.id);toast('Supprimée')}})}
+function vEspace(){
+ if(!W){$('#v').innerHTML=wsMissing();return}
+ const today=pd(S.server_now);
+ const sub=`<div class="row" style="margin:0 0 10px"><button class="btn" aria-pressed="${esub==='taches'}" data-s="taches" style="${esub==='taches'?'background:var(--br);color:var(--bg)':''}">Tâches</button><button class="btn" aria-pressed="${esub==='notes'}" data-s="notes" style="${esub==='notes'?'background:var(--br);color:var(--bg)':''}">Notes</button></div>`;
+ let body='';
+ if(esub==='taches'){const T=W.tasks.filter(t=>!emine||t.assignee===S.me.name);
+  body=`<div class="row" style="margin:0 0 10px"><button class="btn ok" id="tn">Nouvelle tâche</button><label><input type="checkbox" id="tm" ${emine?'checked':''}> Seulement mes tâches</label></div><div class="board">${TS.map(([k,lb])=>{const c=T.filter(t=>t.status===k);return `<div class="col"><b>${esc(lb)} (${c.length})</b>${c.map(t=>{const late=t.due_date&&t.due_date<today&&t.status!=='done';return `<div class="lc ${late?'late':''}"><button class="t" data-te="${esc(t.id)}">${esc(t.title)}</button><span class="tag">${esc(lab(TP,t.priority))}</span><span class="tag">${esc(t.assignee||'')}</span>${t.due_date?`<div class="${late?'late-t':'mut'}">Échéance ${esc(dm(t.due_date))}</div>`:''}<select data-tm="${esc(t.id)}" aria-label="Changer l'état">${opt(TS,t.status)}</select></div>`}).join('')||'<div class="mut">Vide</div>'}</div>`}).join('')}</div>`}
+ else body=`<div class="row" style="margin:0 0 10px"><button class="btn ok" id="nn">Nouvelle note</button></div>${W.notes.map(n=>`<div class="card"><b>${esc(n.title)}</b> <span class="mut">${esc(n.owner||'')} · ${esc(dm(n.updated_at))}</span><pre>${esc(String(n.content||'').slice(0,300))}${(n.content||'').length>300?'…':''}</pre><div class="row"><button class="btn" data-ne="${esc(n.id)}">Ouvrir</button></div></div>`).join('')||'<div class="card">Aucune note.</div>'}`;
+ $('#v').innerHTML=sub+body;
+ document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{esub=b.dataset.s;render()});
+ if(esub==='taches'){$('#tn').onclick=()=>taskForm(null);$('#tm').onchange=e=>{emine=e.target.checked;render()};
+  document.querySelectorAll('[data-te]').forEach(b=>b.onclick=()=>taskForm(W.tasks.find(x=>x.id===b.dataset.te)));
+  document.querySelectorAll('[data-tm]').forEach(sel=>sel.onchange=()=>act(sel,async()=>{await wsSave('dina_tasks',sel.dataset.tm,{status:sel.value})}))}
+ else{$('#nn').onclick=()=>noteForm(null);document.querySelectorAll('[data-ne]').forEach(b=>b.onclick=()=>noteForm(W.notes.find(x=>x.id===b.dataset.ne)))}}
 function vValider(pend){const v=$('#v');if(!pend.length){v.innerHTML='<div class="card">Rien à valider. Les agents travaillent.</div>';return}
  v.innerHTML=pend.map(a=>`<div class="card" data-id="${esc(a.id)}"><span class="tag">${esc(KIND[a.kind]||a.kind)}</span><span class="tag">${esc(AG[a.agent]||a.agent)}</span><span class="tag">Risque ${esc(RISK[a.kind]||'Éditorial')}</span>${(a.flags||[]).map(f=>`<span class="tag flag">${esc(f)}</span>`).join('')}
  <h3 style="margin:8px 0">${esc(a.title)}</h3>${a.kind==='prompt_change'?`<pre>${esc(a.content)}</pre>`:`<textarea rows="${Math.min(14,Math.max(4,a.content.split('\n').length+2))}" class="ed" aria-label="Contenu à valider">${esc(a.content)}</textarea>`}
@@ -179,7 +261,8 @@ function vAgents(){const by={};S.prompts.forEach(p=>(by[p.agent]??=[]).push(p));
  $('#sb').onclick=e=>act(e.target,async()=>{await api('settings',{daily_budget_usd:+$('#bud').value});toast('Plafond enregistré');await load()});
  $('#rv').onclick=e=>act(e.target,async()=>{const r=await api('review',{manual:true});toast(r.proposals.length?r.proposals.length+' amélioration(s) à valider':"Rien à améliorer pour l'instant");await load()})}
 function vHist(){const d=S.approvals.filter(a=>a.status!=='pending');const L={approved:'Validé',edited:'Corrigé',rejected:'Refusé'};
- $('#v').innerHTML=d.length?d.map(a=>`<div class="card"><span class="tag">${esc(L[a.status])}</span><span class="tag">${esc(AG[a.agent]||a.agent)}</span><span class="tag">${esc(KIND[a.kind]||a.kind)}</span>${a.decided_by?`<span class="tag">par ${esc(a.decided_by)}</span>`:''} ${esc(a.title)}${a.comment?`<div class="mut">${esc(a.comment)}</div>`:''}${a.status==='edited'&&a.edited_content?`<details><summary>Comparer la version de l'agent et la version finale</summary><div class="diff"><div><b>Agent</b><pre>${esc(a.content)}</pre></div><div><b>Version finale</b><pre>${esc(a.edited_content)}</pre></div></div></details>`:''}</div>`).join(''):'<div class="card">Pas encore d\'historique.</div>'}
+ $('#v').innerHTML=d.length?d.map(a=>`<div class="card"><span class="tag">${esc(L[a.status])}</span><span class="tag">${esc(AG[a.agent]||a.agent)}</span><span class="tag">${esc(KIND[a.kind]||a.kind)}</span>${a.decided_by?`<span class="tag">par ${esc(a.decided_by)}</span>`:''} ${esc(a.title)}${a.comment?`<div class="mut">${esc(a.comment)}</div>`:''}${['prospection','evenement'].includes(a.kind)&&a.status!=='rejected'&&W?(W.leads.some(l=>l.approval_id===a.id)?'<div class="mut">Déjà dans le pipeline</div>':`<div class="row"><button class="btn" data-lead="${esc(a.id)}">Ajouter au pipeline</button></div>`):''}${a.status==='edited'&&a.edited_content?`<details><summary>Comparer la version de l'agent et la version finale</summary><div class="diff"><div><b>Agent</b><pre>${esc(a.content)}</pre></div><div><b>Version finale</b><pre>${esc(a.edited_content)}</pre></div></div></details>`:''}</div>`).join(''):'<div class="card">Pas encore d\'historique.</div>';
+ document.querySelectorAll('[data-lead]').forEach(b=>b.onclick=()=>act(b,async()=>{const r=await api('lead_from_approval',{id:+b.dataset.lead});wsLocal('dina_leads',r.item);toast('Ajouté au pipeline')}))}
 function vJournal(){const a=S.audit||[];$('#v').innerHTML=`<div class="card"><b>Journal des actions</b><p class="mut">Qui a fait quoi sur le Hub.</p><div style="overflow:auto"><table><tr><th>Quand</th><th>Qui</th><th>Action</th><th>Détail</th></tr>${a.map(x=>`<tr><td>${esc(dm(x.at)+' '+ph(x.at))}</td><td>${esc(x.actor)}</td><td>${esc(x.action)}</td><td>${esc(x.detail)}</td></tr>`).join('')||'<tr><td colspan="4">Rien pour l\'instant.</td></tr>'}</table></div></div>`}
 async function vAcces(){
  $('#v').innerHTML='<div class="card">Chargement…</div>';
