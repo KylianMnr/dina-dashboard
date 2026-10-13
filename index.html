@@ -168,7 +168,7 @@ async function load(first){
  try{S=await api('state');S.approvals=S.approvals||[];S.tasks=S.tasks||[];S.prompts=S.prompts||[];S.messages=S.messages||[];S.runs=S.runs||[];S.audit=S.audit||[];S.schedule=S.schedule||{};S.real=S.real||{orders:0,client_messages:0};S.settings={daily_budget_usd:5,...(S.settings||{})};try{W=await api('ws');W.leads=W.leads||[];W.tasks=W.tasks||[];W.notes=W.notes||[];W.team=W.team||[];WERR=''}catch(e2){if(e2.status===401)throw e2;WERR=e2.message}lastOk=Date.now();online=true;render();if(!load.drv&&(DRV===null||Date.now()-(load.drvAt||0)>6e5)){load.drv=1;api('drive_list').then(r=>{DRV=r;DRV.docs=DRV.docs||[];DRVERR='';load.drvAt=Date.now();if(['home','etat','drive'].includes(tab))render()}).catch(e=>{DRVERR=e.message;if(['home','etat','drive'].includes(tab))render()}).finally(()=>{load.drv=0})}if(FIRST===null){FIRST={};api('archive_index').then(r=>{FIRST=r||{};if(ARK_TABS.includes(tab))render()}).catch(()=>{FIRST=null})}}
  catch(e){online=false;if(e.status===401||!KEY){logout();if(e.status===401)login('Clé refusée');return}
   if(!S)$('#app').innerHTML=`<div class="card" role="alert">${esc(e.message)}<div class="row"><button class="btn" id="rt">Réessayer</button><button class="btn" id="lo">Reconnexion</button></div></div>`,$('#rt').onclick=()=>load(),$('#lo').onclick=logout;
-  else{toast(e.message);head()}}
+  else{toast(e.message);head();if(['home','dash','ia'].includes(tab))render()}}
  finally{loading=false}}
 function head(){
  if(!S)return;const set=S.settings;
@@ -372,7 +372,7 @@ const autoOn=a=>((S.settings.agent_auto||{})[a])!==false,webOn=a=>(S.web_agents|
 function nextRun(set){const hh=set.mission_hour??8;const now=new Date();const ns=now.toLocaleString('sv-SE',{timeZone:'Europe/Paris'}).replace(' ','T');
  for(let i=0;i<9;i++){const key=pd(new Date(now.getTime()+i*864e5));const wd=new Date(key+'T12:00:00Z').getUTCDay();const ag=Object.keys(S.schedule).filter(a=>autoOn(a)&&(S.schedule[a]||[]).includes(wd));if(ag.length&&key+`T${String(hh).padStart(2,'0')}:00:00`>ns)return{key,hh,ag}}return null}
 function stats(){
- const w=Date.now()-7*864e5,tk=S.tasks;const rec=tk.filter(t=>new Date(t.created_at)>w);
+ const w=Date.now()-7*864e5,tk=S.tasks;const rec=tk.filter(t=>new Date(t.finished_at||t.created_at)>w);
  const dec=S.approvals.filter(a=>['approved','edited','rejected'].includes(a.status)&&a.kind!=='prompt_change'&&a.decided_at&&new Date(a.decided_at)>w);
  const acc=dec.length?Math.round(dec.filter(a=>a.status!=='rejected').length/dec.length*100):null;
  const by={};Object.keys(AG).forEach(a=>by[a]={done:0,fail:0,wait:0,cost:0,ok:0,dec:0});
