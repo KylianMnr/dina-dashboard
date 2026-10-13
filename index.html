@@ -70,7 +70,9 @@ aside{background:var(--side);color:var(--sidei);position:sticky;top:0;height:100
 .ni .bd{margin-left:auto;font-size:11px;font-weight:700;min-width:20px;text-align:center;padding:1px 7px;border-radius:99px;background:#a33a2e;color:#fff}.ni .bd.n{background:#ffffff1f;color:var(--sidei)}
 .sfoot{margin-top:auto;padding:14px 10px 0;border-top:1px solid #ffffff14;font-size:13px;color:var(--sidem)}.sfoot b{display:block;color:var(--sidei);font-weight:600}.sfoot button{margin-top:8px;background:none;border:1px solid #ffffff26;color:var(--sidei);border-radius:8px;padding:5px 10px;font:inherit;font-size:13px;cursor:pointer}
 .mainw{min-width:0;display:flex;flex-direction:column}
-.gq{width:190px;max-width:36vw;padding:7px 10px;font-size:13px}
+.gq{flex:0 1 460px;width:100%;min-width:140px;padding:8px 14px 8px 36px;border:1px solid var(--line);border-radius:999px;font-size:14px;color:var(--ink);background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a8a8a' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 13px center}
+.gq:focus-visible{outline:3px solid var(--or);outline-offset:1px}
+@media(max-width:860px){.top{flex-wrap:wrap}.gq{order:9;flex:1 1 100%;max-width:none}}
 .top{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:12px;padding:12px 28px;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .top .sp{flex:1}.top h1{font:600 19px Georgia,serif;color:var(--br);margin:0;cursor:default}
 .pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--mut);background:var(--card);border:1px solid var(--line);border-radius:99px;padding:4px 11px;white-space:nowrap}.pill.al{color:var(--ko);border-color:var(--ko)}
@@ -124,7 +126,7 @@ aside{scrollbar-width:none;background:linear-gradient(180deg,var(--side) 0%,var(
 .st b{color:var(--br)}.ph h2{color:var(--br)}.act{border-left-color:var(--ko)}.act.calm{border-left-color:var(--ok)}
 .btn.ok{background:var(--ok);border-color:var(--ok)}
 </style></head><body class="out">
-<div class="shell"><aside id="side" aria-label="Navigation"></aside><div class="scrim" id="scrim"></div><div class="mainw"><header class="top"><button id="burger" aria-label="Ouvrir le menu">☰</button><h1 id="pt">DINA Hub</h1><span class="sp"></span><input type="search" id="gq" class="gq" placeholder="Rechercher partout" aria-label="Recherche globale"><button id="theme" aria-label="Changer de thème" title="Thème clair ou sombre"></button><span class="pill hide-s" id="sync" role="status"></span><span class="pill" id="cost"></span><button class="btn" id="stop" hidden></button></header>
+<div class="shell"><aside id="side" aria-label="Navigation"></aside><div class="scrim" id="scrim"></div><div class="mainw"><header class="top"><button id="burger" aria-label="Ouvrir le menu">☰</button><h1 id="pt">DINA Hub</h1><span class="sp"></span><input type="search" id="gq" class="gq" placeholder="Rechercher partout" aria-label="Recherche globale"><span class="sp"></span><button id="theme" aria-label="Changer de thème" title="Thème clair ou sombre"></button><span class="pill hide-s" id="sync" role="status"></span><span class="pill" id="cost"></span><button class="btn" id="stop" hidden></button></header>
 <main id="app"></main></div></div><div id="toast" role="status" aria-live="polite"></div>
 <dialog id="ed"><div id="edb"></div><div class="row"><button class="btn ok" id="eds">Enregistrer</button><button class="btn ko" id="edd">Supprimer</button><button class="btn" id="edx">Fermer</button></div></dialog>
 <dialog id="dlg"><div id="dlgb"></div><div class="row"><button class="btn" id="dlgc">Copier</button><button class="btn" id="dlgx">Fermer</button></div></dialog>
@@ -195,10 +197,10 @@ const NAV=[
 const PAGES={recherche:['Recherche','Missions, validations, tâches, notes, prospects, événements et documents Drive, depuis un seul champ.'],home:['Pilotage','Ce qui se passe, ce qui vous attend et ce que coûte le système.'],ia:['Centre des IA','État, activité et performance de chaque agent. Cliquez sur un agent pour le détail.'],plan:['Planning et automatisations','Quand les agents travaillent seuls, et ce qui est prévu.'],feed:['Activité en direct','Dernières exécutions des agents.'],agents:['Consignes et prompts',"Versions des consignes de chaque agent et améliorations proposées."],valider:['À valider',"Ce que les agents vous soumettent. Ils n'ont aucun moyen de publier, d'envoyer ou de payer : c'est vous qui agissez après validation."],travail:['Missions','Travail des agents en file, en cours, en attente de validation ou en échec.'],livrables:['Livrables','Résultats terminés des agents, par mois et par jour.'],demander:['Nouvelle demande',"Confier un travail à un agent ou au chef d'orchestre."],espace:['Tâches et notes',"Le travail de l'équipe : tâches partagées et notes."],historique:['Historique des validations','Décisions passées, par mois et par jour.'],pipeline:['Pipeline des prospects','Suivi commercial détaillé, étape par étape.'],drive:['Drive DINA','Documents lus par les agents, synchronisés automatiquement.'],budget:['Budget et consommation','Dépenses IA estimées et plafond journalier appliqué par le serveur.'],etat:['État des services','Connexions et automatismes, tels que cette page peut les constater.'],journal:['Journal','Qui a fait quoi sur le Hub, par mois et par jour.'],acces:['Accès','Personnes, rôles et clés.']};
 const PL={marque:{t:'Marque et communauté',d:'Contenu, réseaux sociaux et visuels : ce que préparent les agents et ce qui attend votre accord.',a:['contenu','reseaux','visuels']},produit:{t:'Produit et site',d:'Catalogue, fiches produits et site e-commerce.',a:['produit','site']},commercial:{t:'Développement commercial',d:'Prospection B2B, ventes, marketing, objectifs et pipeline.',a:['prospection','ventes','marketing']},direction:{t:'Veille, juridique et opérations',d:'Coordination, veille concurrentielle, conformité et organisation.',a:['orchestrateur','veille','juridique','operations']}};
 const BACK={agent:['ia','Centre des IA'],pipeline:['pole:commercial','Développement commercial']};
-let SEL=null,SQ='',tfp='',tfd='',tfq='';
+let SEL=null,SQ='',PREV=null,tfp='',tfd='',tfq='';
 const agPole=a=>(Object.values(PL).find(p=>p.a.includes(a))||{}).t||'';
 const rel=d=>{if(!d)return '';const m=Math.round((Date.now()-new Date(d))/60000);if(m<1)return "à l'instant";if(m<60)return `il y a ${m} min`;const h=Math.round(m/60);if(h<24)return `il y a ${h} h`;return `il y a ${Math.round(h/24)} j`};
-function go(t,sel){tab=t;SEL=sel??null;document.body.classList.remove('nav');render();window.scrollTo(0,0)}
+function go(t,sel){if(t==='recherche'&&tab!=='recherche')PREV={tab,sel:SEL};if(t!=='recherche'&&SQ){SQ='';const g=$('#gq');if(g)g.value=''}tab=t;SEL=sel??null;document.body.classList.remove('nav');render();window.scrollTo(0,0)}
 // Recherche globale
 function srchAll(){const q=SQ.trim().toLowerCase();if(q.length<2)return null;
  const has=(...a)=>a.some(x=>String(x||'').toLowerCase().includes(q)),G=[];
@@ -221,8 +223,8 @@ function drawSearch(){const box=$('#sr');if(!box)return;const G=srchAll();
   else if(g==='Documents Drive'){if(/^https:\/\//.test(x.url||''))window.open(x.url,'_blank','noopener')}else{LANE=isEv(x)?'ev':'b2b';go('pipeline');setTimeout(()=>leadForm(x),0)}})}
 async function vRecherche(){$('#v').innerHTML='<div id="sr"></div>';drawSearch();
  if(!DRV&&!vRecherche.busy){vRecherche.busy=1;try{DRV=await api('drive_list');DRV.docs=DRV.docs||[]}catch(e){}vRecherche.busy=0;if(tab==='recherche')drawSearch()}}
-$('#gq').oninput=e=>{SQ=e.target.value;if(tab!=='recherche'){tab='recherche';SEL=null;document.body.classList.remove('nav');render()}else drawSearch()};
-$('#gq').onkeydown=e=>{if(e.key==='Escape'){e.target.value='';SQ='';drawSearch()}};
+$('#gq').oninput=e=>{SQ=e.target.value;if(!SQ.trim()&&tab==='recherche'){const p=PREV||{tab:'home'};PREV=null;tab=p.tab;SEL=p.sel??null;render();return}if(tab!=='recherche')go('recherche');else drawSearch()};
+$('#gq').onkeydown=e=>{if(e.key==='Escape'){e.target.value='';e.target.dispatchEvent(new Event('input'))}};
 
 function goKey(k){k.startsWith('pole:')?go('pole',k.slice(5)):go(k)}
 const navKey=()=>tab==='agent'?'ia':tab==='pipeline'?'pole:commercial':tab==='pole'?'pole:'+SEL:tab==='dash'?'home':tab;
