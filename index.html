@@ -131,7 +131,7 @@ aside{scrollbar-width:none;background:linear-gradient(180deg,var(--side) 0%,var(
 const DEFAULT_URL='https://osfxqudjkforfzfsdrub.supabase.co/functions/v1/agents';
 const AG={orchestrateur:"Chef d'orchestre",produit:'Produit',contenu:'Contenu',reseaux:'Réseaux',site:'Site',ventes:'Ventes',visuels:'Visuels',marketing:'Marketing',operations:'Opérations',prospection:'Prospection B2B & Événements',veille:'Veille concurrentielle',juridique:'Juridique & Conformité'};
 const POLES={'Produit & B2C':['produit','site'],'Ventes B2B':['prospection','ventes','marketing'],'Marque & communauté':['reseaux','contenu','visuels'],'Direction & opérations':['orchestrateur','operations','veille','juridique']};
-const KIND={publication:'Publication',message_client:'Message client',decision:'Décision',prix_ou_promo:'Prix / promo',budget:'Budget',juridique:'Juridique',projet:'Projet proposé',prospection:'Prospection',evenement:'Événement',autre:'Autre',prompt_change:"Amélioration d'agent"};
+const KIND={publication:'Publication',message_client:'Message client',decision:'Décision',prix_ou_promo:'Prix / promo',budget:'Budget',juridique:'Juridique',projet:'Projet proposé',prospection:'Prospect B2B',evenement:'Événement (vente sur place)',autre:'Autre',prompt_change:"Amélioration d'agent"};
 const RISK={prix_ou_promo:'Commercial',budget:'Opérationnel',juridique:'Opérationnel',message_client:'Commercial',publication:'Éditorial',projet:'Éditorial',prospection:'Commercial',evenement:'Commercial',decision:'Opérationnel',autre:'Éditorial',prompt_change:'Opérationnel'};
 const DJ=['dim','lun','mar','mer','jeu','ven','sam'],DL=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 const $=s=>document.querySelector(s);
@@ -139,7 +139,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const store=()=>localStorage.getItem('dina_key')?localStorage:sessionStorage;
 const get=k=>{try{return localStorage.getItem(k)||sessionStorage.getItem(k)||''}catch(e){return ''}};
 const OKU=u=>u===DEFAULT_URL;try{localStorage.removeItem('dina_url');sessionStorage.removeItem('dina_url')}catch(e){}
-let URLB=DEFAULT_URL,KEY=get('dina_key'),S=null,tab='home',busy=false,loading=false,lastOk=0,online=true,newKey=null,USERS=null,W=null,WERR='',pq='',pown='',esub='taches',emine=false,DRV=null,DRVERR='',dq='',OPEN={},ARC={approvals:{},tasks:{},audit:{}},ARCM=new Set(),LOADING=new Set(),FIRST=null;
+let URLB=DEFAULT_URL,KEY=get('dina_key'),S=null,tab='home',busy=false,loading=false,lastOk=0,online=true,newKey=null,USERS=null,W=null,WERR='',pq='',pown='',LANE='b2b',esub='taches',emine=false,DRV=null,DRVERR='',dq='',OPEN={},ARC={approvals:{},tasks:{},audit:{}},ARCM=new Set(),LOADING=new Set(),FIRST=null;
 const pd=d=>!d?'':new Date(d).toLocaleDateString('sv-SE',{timeZone:'Europe/Paris'});
 const ph=d=>!d?'':new Date(d).toLocaleTimeString('fr-FR',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit'});
 const dm=d=>pd(d).slice(5).split('-').reverse().join('/');
@@ -428,6 +428,8 @@ function vHub(part){
 
 const LS=[['identifier','Identifié'],['contacte','Contacté'],['relance','À relancer'],['echange','Échange en cours'],['devis','Devis envoyé'],['gagne','Gagné'],['perdu','Perdu']];
 const LT=[['boutique','Boutique'],['entreprise','Entreprise'],['evenement','Événement'],['association','Association'],['collectivite','Collectivité'],['autre','Autre']];
+const LSE=[['identifier','Repéré'],['contacte','Candidature envoyée'],['relance','À relancer'],['echange','Dossier en cours'],['devis','Inscrit ou confirmé'],['gagne','Événement tenu'],['perdu','Écarté']];
+const isEv=l=>l&&l.type==='evenement';
 const TM=[['froid','Froid'],['tiede','Tiède'],['chaud','Chaud']],TE={froid:'❄',tiede:'☁',chaud:'🔥'};
 const TS=[['todo','À faire'],['doing','En cours'],['review','À valider'],['done','Terminé']],TP=[['low','Basse'],['normal','Normale'],['high','Haute'],['urgent','Urgente']];
 const lab=(arr,v)=>(arr.find(x=>x[0]===v)||[v,v])[1];
@@ -448,23 +450,25 @@ function editor(title,fields,vals,o){const d=$('#ed');
  $('#edd').hidden=!o.onDelete;$('#edd').onclick=e=>act(e.target,async()=>{if(!confirm('Supprimer définitivement ?'))return;await o.onDelete();d.close()});
  $('#edx').onclick=()=>d.close();if(o.bind)o.bind();d.showModal()}
 const team=()=>(W.team||[]).map(n=>[n,n]);
-function leadForm(l){const isNew=!l;l=l||{status:'identifier',type:'entreprise',temperature:'tiede',owner:S.me.name};
- editor(isNew?'Nouveau prospect':l.nom,[{k:'nom',l:'Nom',w:1},{k:'type',l:'Type',t:'sel',o:LT},{k:'status',l:'Étape',t:'sel',o:LS},{k:'contact',l:'Contact'},{k:'email',l:'Email'},{k:'phone',l:'Téléphone'},{k:'valeur',l:'Valeur estimée (à renseigner, pas de prix inventé)',t:'num'},{k:'temperature',l:'Intérêt',t:'sel',o:TM},{k:'owner',l:'Responsable',t:'sel',o:[['','Personne'],...team()]},{k:'next_relance',l:'Prochaine relance',t:'date'},{k:'notes',l:'Notes',t:'area',w:1,r:5}],l,{
-  onSave:async r=>{if(!r.nom||!String(r.nom).trim()){throw new Error('Nom requis')}await wsSave('dina_leads',isNew?null:l.id,r);toast('Enregistré')},
+function leadForm(l,lane){const isNew=!l;const ev=isNew?lane==='ev':isEv(l);l=l||{status:'identifier',type:ev?'evenement':'entreprise',temperature:'tiede',owner:S.me.name};
+ editor(isNew?(ev?'Nouvel événement':'Nouveau prospect B2B'):l.nom,[{k:'nom',l:ev?"Nom de l'événement":'Nom',w:1},...(ev?[]:[{k:'type',l:'Type',t:'sel',o:LT.filter(x=>x[0]!=='evenement')}]),{k:'status',l:'Étape',t:'sel',o:ev?LSE:LS},{k:'contact',l:ev?'Organisateur et contact':'Contact'},{k:'email',l:'Email'},{k:'phone',l:'Téléphone'},{k:'valeur',l:ev?"Coût de l'emplacement (à renseigner, rien d'inventé)":'Valeur estimée (à renseigner, pas de prix inventé)',t:'num'},{k:'temperature',l:'Intérêt',t:'sel',o:TM},{k:'owner',l:'Responsable',t:'sel',o:[['','Personne'],...team()]},{k:'next_relance',l:ev?"Date limite d'inscription ou prochaine échéance":'Prochaine relance',t:'date'},{k:'notes',l:ev?'Notes (lieu, dates, public, stock à prévoir)':'Notes',t:'area',w:1,r:5}],l,{
+  onSave:async r=>{if(!r.nom||!String(r.nom).trim()){throw new Error('Nom requis')}if(ev)r.type='evenement';await wsSave('dina_leads',isNew?null:l.id,r);toast('Enregistré')},
   onDelete:isNew?null:async()=>{await wsDel('dina_leads',l.id);toast('Supprimé')},
   extra:isNew?'':`<div class="row"><input type="text" id="ltx" placeholder="Note du contact (ex. appelé, message envoyé)" style="flex:1"><button class="btn" id="lt">Contact fait, relance dans 3 jours</button></div><div class="tl">${(l.timeline||[]).map(t=>`<div>${esc(dm(t.date))} ${esc(ph(t.date))} : ${esc(t.texte)}</div>`).join('')}</div>${l.agent?`<p class="mut">Proposé par l'agent ${esc(AG[l.agent]||l.agent)}</p>`:''}`,
   bind:()=>{if(!isNew)$('#lt').onclick=e=>act(e.target,async()=>{const r=await api('lead_touch',{id:l.id,texte:$('#ltx').value.trim()||undefined});wsLocal('dina_leads',r.item);$('#ed').close();toast('Contact enregistré')})}})}
 function vPipe(){
  if(!W){$('#v').innerHTML=wsMissing();return}
  const today=pd(S.server_now);
- $('#v').innerHTML=`<div class="card"><div class="row" style="margin-top:0"><input type="text" id="pq" placeholder="Rechercher un prospect" value="${esc(pq)}" style="flex:1;min-width:160px"><select id="po"><option value="">Tous les responsables</option>${(W.team||[]).map(n=>`<option ${n===pown?'selected':''}>${esc(n)}</option>`).join('')}</select><button class="btn ok" id="pn">Nouveau prospect</button></div><p class="mut" id="ps"></p></div><div id="board"></div>`;
- const draw=()=>{const q=pq.toLowerCase();const L=W.leads.filter(l=>(!pown||l.owner===pown)&&(!q||(l.nom+' '+(l.contact||'')+' '+(l.notes||'')).toLowerCase().includes(q)));
+ const EV=LANE==='ev',COLS=EV?LSE:LS;
+ $('#v').innerHTML=`<div class="row" style="margin:0 0 10px"><button class="btn" data-lane="b2b" aria-pressed="${!EV}" style="${!EV?'background:var(--br);color:var(--bg)':''}">Prospects B2B</button><button class="btn" data-lane="ev" aria-pressed="${EV}" style="${EV?'background:var(--br);color:var(--bg)':''}">Événements (vente sur place)</button></div><div class="card"><div class="row" style="margin-top:0"><input type="text" id="pq" placeholder="${EV?'Rechercher un événement':'Rechercher un prospect'}" value="${esc(pq)}" style="flex:1;min-width:160px"><select id="po"><option value="">Tous les responsables</option>${(W.team||[]).map(n=>`<option ${n===pown?'selected':''}>${esc(n)}</option>`).join('')}</select><button class="btn ok" id="pn">${EV?'Nouvel événement':'Nouveau prospect'}</button></div><p class="mut" id="ps"></p></div><div id="board"></div>`;
+ document.querySelectorAll('[data-lane]').forEach(b=>b.onclick=()=>{LANE=b.dataset.lane;render()});
+ const draw=()=>{const q=pq.toLowerCase();const L=W.leads.filter(l=>(EV?isEv(l):!isEv(l))&&(!pown||l.owner===pown)&&(!q||(l.nom+' '+(l.contact||'')+' '+(l.notes||'')).toLowerCase().includes(q)));
   const open=L.filter(l=>!['gagne','perdu'].includes(l.status)),late=open.filter(l=>l.next_relance&&l.next_relance<=today);
-  $('#ps').textContent=`${open.length} prospect(s) actif(s), ${late.length} relance(s) à faire${open.some(l=>l.valeur)?', valeur estimée en cours : '+num(open.reduce((s,l)=>s+Number(l.valeur||0),0)):''}`;
-  $('#board').innerHTML=`<div class="board" tabindex="0" role="region" aria-label="Colonnes du pipeline, défilement horizontal">${LS.map(([k,lb])=>{const c=L.filter(l=>l.status===k);return `<div class="col"><b>${esc(lb)} (${c.length})</b>${c.map(l=>{const lt=l.next_relance&&l.next_relance<=today&&!['gagne','perdu'].includes(l.status);return `<div class="lc ${lt?'late':''}"><button class="t" data-e="${esc(l.id)}">${esc(l.nom)}</button><span class="tag">${esc(lab(LT,l.type))}</span><span class="tag">${TE[l.temperature]||''} ${esc(lab(TM,l.temperature))}</span>${l.source==='agent'?`<span class="tag">agent</span>`:''}${l.valeur?`<div>${esc(num(l.valeur))}</div>`:''}${l.owner?`<div class="mut">${esc(l.owner)}</div>`:''}${l.next_relance?`<div class="${lt?'late-t':'mut'}">Relance ${esc(dm(l.next_relance))}</div>`:''}<select data-mv="${esc(l.id)}" aria-label="Changer d'étape">${opt(LS,l.status)}</select></div>`}).join('')||'<div class="mut">Vide</div>'}</div>`}).join('')}</div>`;
+  $('#ps').textContent=EV?`${open.length} événement(s) actif(s), ${late.length} échéance(s) à traiter`:`${open.length} prospect(s) actif(s), ${late.length} relance(s) à faire${open.some(l=>l.valeur)?', valeur estimée en cours : '+num(open.reduce((s,l)=>s+Number(l.valeur||0),0)):''}`;
+  $('#board').innerHTML=`<div class="board" tabindex="0" role="region" aria-label="Colonnes du pipeline, défilement horizontal">${COLS.map(([k,lb])=>{const c=L.filter(l=>l.status===k);return `<div class="col"><b>${esc(lb)} (${c.length})</b>${c.map(l=>{const lt=l.next_relance&&l.next_relance<=today&&!['gagne','perdu'].includes(l.status);return `<div class="lc ${lt?'late':''}"><button class="t" data-e="${esc(l.id)}">${esc(l.nom)}</button>${EV?'':`<span class="tag">${esc(lab(LT,l.type))}</span>`}<span class="tag">${TE[l.temperature]||''} ${esc(lab(TM,l.temperature))}</span>${l.source==='agent'?`<span class="tag">agent</span>`:''}${l.valeur?`<div>${esc(num(l.valeur))}</div>`:''}${l.owner?`<div class="mut">${esc(l.owner)}</div>`:''}${l.next_relance?`<div class="${lt?'late-t':'mut'}">${EV?'Échéance':'Relance'} ${esc(dm(l.next_relance))}</div>`:''}<select data-mv="${esc(l.id)}" aria-label="Changer d'étape">${opt(COLS,l.status)}</select></div>`}).join('')||'<div class="mut">Vide</div>'}</div>`}).join('')}</div>`;
   document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>leadForm(W.leads.find(x=>x.id===b.dataset.e)));
   document.querySelectorAll('[data-mv]').forEach(sel=>sel.onchange=()=>act(sel,async()=>{await wsSave('dina_leads',sel.dataset.mv,{status:sel.value})}))};
- draw();$('#pq').oninput=e=>{pq=e.target.value;draw()};$('#po').onchange=e=>{pown=e.target.value;draw()};$('#pn').onclick=()=>leadForm(null)}
+ draw();$('#pq').oninput=e=>{pq=e.target.value;draw()};$('#po').onchange=e=>{pown=e.target.value;draw()};$('#pn').onclick=()=>leadForm(null,LANE)}
 function taskForm(t){const isNew=!t;t=t||{status:'todo',priority:'normal',assignee:S.me.name};
  editor(isNew?'Nouvelle tâche':t.title,[{k:'title',l:'Titre',w:1},{k:'status',l:'État',t:'sel',o:TS},{k:'priority',l:'Priorité',t:'sel',o:TP},{k:'assignee',l:'Pour',t:'sel',o:team()},{k:'due_date',l:'Échéance',t:'date'},{k:'description',l:'Détail',t:'area',w:1,r:5}],t,{
   onSave:async r=>{if(!r.title||!String(r.title).trim())throw new Error('Titre requis');await wsSave('dina_tasks',isNew?null:t.id,r);toast('Enregistré')},
@@ -489,7 +493,7 @@ function vEspace(){
  else{$('#nn').onclick=()=>noteForm(null);document.querySelectorAll('[data-ne]').forEach(b=>b.onclick=()=>noteForm(W.notes.find(x=>x.id===b.dataset.ne)))}}
 const EXEC='À exécuter : ';
 async function afterApprove(a,txt){if(!a||a.kind==='prompt_change')return;
- try{if(['prospection','evenement'].includes(a.kind)){await api('lead_from_approval',{id:a.id});toast('Validé et ajouté au pipeline des prospects');return}
+ try{if(['prospection','evenement'].includes(a.kind)){await api('lead_from_approval',{id:a.id});LANE=a.kind==='evenement'?'ev':'b2b';toast(a.kind==='evenement'?'Validé et ajouté aux événements de vente sur place':'Validé et ajouté aux prospects B2B');return}
   const head=`Validé par ${S.me.name} le ${new Date().toLocaleDateString('fr-FR')}. Proposé par ${AG[a.agent]||a.agent} (${KIND[a.kind]||a.kind}). Les agents ne publient et n'envoient rien eux-mêmes : faites-le, puis passez cette tâche en Terminé.\n\n`;
   await api('ws_save',{table:'dina_tasks',fields:{title:(EXEC+a.title).slice(0,200),description:(head+String(txt||'')).slice(0,4000),assignee:S.me.name,status:'todo',priority:['prix_ou_promo','juridique','budget','message_client'].includes(a.kind)?'high':'normal'}});
   toast('Validé : ajouté à vos tâches à exécuter')}catch(e){toast('Validé, mais la tâche à exécuter n\'a pas pu être créée : '+e.message)}}
@@ -535,12 +539,12 @@ function vAgents(){const by={};S.prompts.forEach(p=>(by[p.agent]??=[]).push(p));
  document.querySelectorAll('[data-pv]').forEach(b=>b.onclick=()=>act(b,async()=>{if(confirm('Revenir à cette version ?')){await api('prompt',{id:+b.dataset.pv});await load()}}));
  $('#rv').onclick=e=>act(e.target,async()=>{const r=await api('review',{manual:true});toast(r.proposals.length?r.proposals.length+' amélioration(s) à valider':"Rien à améliorer pour l'instant");await load()})}
 function vHist(){const d=allOf('approvals').filter(a=>a.status!=='pending').sort((a,b)=>String(b.decided_at||b.created_at).localeCompare(String(a.decided_at||a.created_at)));const L={approved:'Validé',edited:'Corrigé',rejected:'Refusé'};
- const card=a=>`<div class="card"><span class="tag">${esc(L[a.status]||a.status)}</span><span class="tag">${esc(AG[a.agent]||a.agent)}</span><span class="tag">${esc(KIND[a.kind]||a.kind)}</span>${a.decided_by?`<span class="tag">par ${esc(a.decided_by)}</span>`:''}<span class="mut">${esc(ph(a.decided_at||a.created_at))}</span> ${esc(a.title)}${a.comment?`<div class="mut">${esc(a.comment)}</div>`:''}${a.status==='rejected'&&a.kind!=='prompt_change'?`<div class="row"><button class="btn" data-reopen="${esc(a.id)}">Remettre à valider</button></div>`:''}${['prospection','evenement'].includes(a.kind)&&a.status!=='rejected'&&W?(W.leads.some(l=>l.approval_id===a.id)?'<div class="mut">Déjà dans le pipeline</div>':`<div class="row"><button class="btn" data-lead="${esc(a.id)}">Ajouter au pipeline</button></div>`):''}${a.status==='edited'&&a.edited_content?`<details><summary>Comparer la version de l'agent et la version finale</summary><div class="diff"><div><b>Agent</b><pre>${esc(a.content)}</pre></div><div><b>Version finale</b><pre>${esc(a.edited_content)}</pre></div></div></details>`:''}</div>`;
+ const card=a=>`<div class="card"><span class="tag">${esc(L[a.status]||a.status)}</span><span class="tag">${esc(AG[a.agent]||a.agent)}</span><span class="tag">${esc(KIND[a.kind]||a.kind)}</span>${a.decided_by?`<span class="tag">par ${esc(a.decided_by)}</span>`:''}<span class="mut">${esc(ph(a.decided_at||a.created_at))}</span> ${esc(a.title)}${a.comment?`<div class="mut">${esc(a.comment)}</div>`:''}${a.status==='rejected'&&a.kind!=='prompt_change'&&!String(a.comment||'').startsWith('Remplacée')?`<div class="row"><button class="btn" data-reopen="${esc(a.id)}">Remettre à valider</button></div>`:''}${['prospection','evenement'].includes(a.kind)&&a.status!=='rejected'&&W?(W.leads.some(l=>l.approval_id===a.id)?'<div class="mut">Déjà dans le pipeline</div>':`<div class="row"><button class="btn" data-lead="${esc(a.id)}">Ajouter au pipeline</button></div>`):''}${a.status==='edited'&&a.edited_content?`<details><summary>Comparer la version de l'agent et la version finale</summary><div class="diff"><div><b>Agent</b><pre>${esc(a.content)}</pre></div><div><b>Version finale</b><pre>${esc(a.edited_content)}</pre></div></div></details>`:''}</div>`;
  $('#v').innerHTML=folders('hist',d,a=>a.decided_at||a.created_at,card,{ark:'approvals',empty:'<div class="card">Pas encore d\'historique.</div>'});bindFolders();
  document.querySelectorAll('[data-reopen]').forEach(b=>b.onclick=()=>act(b,async()=>{const a=d.find(x=>String(x.id)===b.dataset.reopen);if(!a)return;
   await api('enqueue',{agent:a.agent,priority:2,title:('À resoumettre : '+a.title).slice(0,120),brief:`${S.me.name} a refusé par erreur ta proposition #${a.id} « ${a.title} » (type ${a.kind}). Resoumets-la telle quelle avec request_approval (même type, même titre, même contenu), sans rien modifier ni refaire d'autre travail.\n\nContenu proposé :\n${String(a.content||'').slice(0,6000)}${a.options?`\n\nOptions / contexte :\n${String(a.options).slice(0,2000)}`:''}${a.recommendation?`\n\nRecommandation :\n${String(a.recommendation).slice(0,500)}`:''}`});
   toast("Demandé à l'agent : la proposition revient dans À valider d'ici quelques minutes");b.disabled=true;b.textContent='Demande envoyée'}));
- document.querySelectorAll('[data-lead]').forEach(b=>b.onclick=()=>act(b,async()=>{const r=await api('lead_from_approval',{id:+b.dataset.lead});wsLocal('dina_leads',r.item);toast('Ajouté au pipeline')}))}
+ document.querySelectorAll('[data-lead]').forEach(b=>b.onclick=()=>act(b,async()=>{const r=await api('lead_from_approval',{id:+b.dataset.lead});wsLocal('dina_leads',r.item);toast(isEv(r.item)?'Ajouté aux événements':'Ajouté aux prospects B2B')}))}
 function vJournal(){const a=allOf('audit').sort((x,y)=>String(y.at).localeCompare(String(x.at)));
  const row=x=>`<tr><td>${esc(ph(x.at))}</td><td>${esc(x.actor)}</td><td>${esc(x.action)}</td><td>${esc(x.detail)}</td></tr>`;
  const wrap=h=>`<div style="overflow:auto" data-ovf tabindex="0" role="region" aria-label="Tableau défilant"><table><tr><th>Heure</th><th>Qui</th><th>Action</th><th>Détail</th></tr>${h}</table></div>`;
@@ -672,8 +676,8 @@ function texte_(f) {
     if (mime === MimeType.GOOGLE_DOCS) return DocumentApp.openById(id).getBody().getText();
     if (mime === MimeType.GOOGLE_SHEETS) return feuilles_(SpreadsheetApp.openById(id));
     if (mime === MimeType.GOOGLE_SLIDES) return diapos_(SlidesApp.openById(id));
-    if (/^text\//.test(mime) || /json|csv|xml|markdown/.test(mime)) return f.getBlob().getDataAsString();
-    if (CONVERSION[mime] && f.getSize() < 20 * 1024 * 1024) return converti_(id, CONVERSION[mime]);
+    if (CONVERSION[mime]) return f.getSize() < 20 * 1024 * 1024 ? converti_(id, CONVERSION[mime]) : '';
+    if (/^text\//.test(mime) || /^application\/(json|csv|xml|markdown|x-markdown)$/.test(mime)) return f.getBlob().getDataAsString();
   } catch (e) {
     console.warn('Lecture impossible : ' + f.getName() + ' : ' + e.message);
   }
@@ -725,5 +729,4 @@ function envoyer_(donnees) {
   });
   if (r.getResponseCode() !== 200) throw new Error('Serveur DINA ' + r.getResponseCode() + ' : ' + r.getContentText().slice(0, 300));
   return JSON.parse(r.getContentText());
-}
-</script></body></html>
+}</script></body></html>
