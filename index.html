@@ -137,7 +137,11 @@ const DJ=['dim','lun','mar','mer','jeu','ven','sam'],DL=['Dimanche','Lundi','Mar
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const urls=t=>[...new Set((String(t||'').match(/https?:\/\/[^\s<>"')]+/g)||[]).map(u=>u.replace(/[.,;:]+$/,'')))];
-const lks=t=>urls(t).map(u=>`<a class="lk" style="margin-left:0;text-decoration:underline" href="${esc(u)}" target="_blank" rel="noopener noreferrer">${/docs\.google|drive\.google/.test(u)?'Ouvrir dans le Drive':esc(u.replace(/^https?:\/\//,'').slice(0,40))}</a>`).join(' ');
+const isG=u=>/docs\.google|drive\.google/.test(u);
+const ulab=u=>/drive\.google\.com\/drive\/folders/.test(u)?'Dossier Drive':/docs\.google\.com\/document/.test(u)?'Document':/spreadsheets/.test(u)?'Tableur':/presentation/.test(u)?'Présentation':isG(u)?'Drive':u.replace(/^https?:\/\/(www\.)?/,'').split(/[\/?#]/)[0].slice(0,32);
+const lk1=u=>`<a class="lk" style="margin-left:0;text-decoration:underline" href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(ulab(u))}</a>`;
+const lks=t=>urls(t).filter(isG).map(lk1).join(' · ');
+const lksAll=t=>urls(t).map(u=>`<div style="margin:3px 0">${lk1(u)}</div>`).join('');
 const store=()=>localStorage.getItem('dina_key')?localStorage:sessionStorage;
 const get=k=>{try{return localStorage.getItem(k)||sessionStorage.getItem(k)||''}catch(e){return ''}};
 const OKU=u=>u===DEFAULT_URL;try{localStorage.removeItem('dina_url');sessionStorage.removeItem('dina_url')}catch(e){}
@@ -474,12 +478,12 @@ function vPipe(){
 function taskForm(t){const isNew=!t;t=t||{status:'todo',priority:'normal',assignee:S.me.name};
  editor(isNew?'Nouvelle tâche':t.title,[{k:'title',l:'Titre',w:1},{k:'status',l:'État',t:'sel',o:TS},{k:'priority',l:'Priorité',t:'sel',o:TP},{k:'assignee',l:'Pour',t:'sel',o:team()},{k:'due_date',l:'Échéance',t:'date'},{k:'description',l:'Détail',t:'area',w:1,r:5}],t,{
   onSave:async r=>{if(!r.title||!String(r.title).trim())throw new Error('Titre requis');await wsSave('dina_tasks',isNew?null:t.id,r);toast('Enregistré')},
-  extra:urls(t.description).length?`<p><b>Liens</b> : ${lks(t.description)}</p>`:'',
+  extra:urls(t.description).length?`<div style="margin-top:10px"><b>Liens</b>${lksAll(t.description)}</div>`:'',
   onDelete:isNew?null:async()=>{await wsDel('dina_tasks',t.id);toast('Supprimée')}})}
 function noteForm(n){const isNew=!n;n=n||{};
  editor(isNew?'Nouvelle note':n.title,[{k:'title',l:'Titre',w:1},{k:'content',l:'Contenu',t:'area',w:1,r:14}],n,{
   onSave:async r=>{await wsSave('dina_notes',isNew?null:n.id,r);toast('Enregistré')},
-  extra:urls(n.content).length?`<p><b>Liens</b> : ${lks(n.content)}</p>`:'',
+  extra:urls(n.content).length?`<div style="margin-top:10px"><b>Liens</b>${lksAll(n.content)}</div>`:'',
   onDelete:isNew?null:async()=>{await wsDel('dina_notes',n.id);toast('Supprimée')}})}
 function vEspace(){
  if(!W){$('#v').innerHTML=wsMissing();return}
@@ -487,7 +491,7 @@ function vEspace(){
  const sub=`<div class="row" style="margin:0 0 10px"><button class="btn" aria-pressed="${esub==='taches'}" data-s="taches" style="${esub==='taches'?'background:var(--br);color:var(--bg)':''}">Tâches</button><button class="btn" aria-pressed="${esub==='notes'}" data-s="notes" style="${esub==='notes'?'background:var(--br);color:var(--bg)':''}">Notes</button></div>`;
  let body='';
  if(esub==='taches'){const T=W.tasks.filter(t=>!emine||t.assignee===S.me.name);
-  body=`<div class="row" style="margin:0 0 10px"><button class="btn ok" id="tn">Nouvelle tâche</button><label><input type="checkbox" id="tm" ${emine?'checked':''}> Seulement mes tâches</label></div><div class="board" tabindex="0" role="region" aria-label="Colonnes du pipeline, défilement horizontal">${TS.map(([k,lb])=>{const c=T.filter(t=>t.status===k);return `<div class="col"><b>${esc(lb)} (${c.length})</b>${c.map(t=>{const late=t.due_date&&t.due_date<today&&t.status!=='done';return `<div class="lc ${late?'late':''}"><button class="t" data-te="${esc(t.id)}">${esc(t.title)}</button><span class="tag">${esc(lab(TP,t.priority))}</span>${urls(t.description).length?`<div>${lks(t.description)}</div>`:''}<span class="tag">${esc(t.assignee||'')}</span>${t.due_date?`<div class="${late?'late-t':'mut'}">Échéance ${esc(dm(t.due_date))}</div>`:''}<select data-tm="${esc(t.id)}" aria-label="Changer l'état">${opt(TS,t.status)}</select></div>`}).join('')||'<div class="mut">Vide</div>'}</div>`}).join('')}</div>`}
+  body=`<div class="row" style="margin:0 0 10px"><button class="btn ok" id="tn">Nouvelle tâche</button><label><input type="checkbox" id="tm" ${emine?'checked':''}> Seulement mes tâches</label></div><div class="board" tabindex="0" role="region" aria-label="Colonnes du pipeline, défilement horizontal">${TS.map(([k,lb])=>{const c=T.filter(t=>t.status===k);return `<div class="col"><b>${esc(lb)} (${c.length})</b>${c.map(t=>{const late=t.due_date&&t.due_date<today&&t.status!=='done';return `<div class="lc ${late?'late':''}"><button class="t" data-te="${esc(t.id)}">${esc(t.title)}</button><span class="tag">${esc(lab(TP,t.priority))}</span><span class="tag">${esc(t.assignee||'')}</span>${t.due_date?`<div class="${late?'late-t':'mut'}">Échéance ${esc(dm(t.due_date))}</div>`:''}${urls(t.description).some(isG)?`<div style="margin:6px 0">${lks(t.description)}</div>`:''}<select data-tm="${esc(t.id)}" aria-label="Changer l'état">${opt(TS,t.status)}</select></div>`}).join('')||'<div class="mut">Vide</div>'}</div>`}).join('')}</div>`}
  else body=`<div class="row" style="margin:0 0 10px"><button class="btn ok" id="nn">Nouvelle note</button></div>${W.notes.map(n=>`<div class="card"><b>${esc(n.title)}</b> <span class="mut">${esc(n.owner||'')} · ${esc(dm(n.updated_at))}</span><pre>${esc(String(n.content||'').slice(0,300))}${(n.content||'').length>300?'…':''}</pre><div class="row"><button class="btn" data-ne="${esc(n.id)}">Ouvrir</button></div></div>`).join('')||'<div class="card">Aucune note.</div>'}`;
  $('#v').innerHTML=sub+body;
  document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{esub=b.dataset.s;render()});
